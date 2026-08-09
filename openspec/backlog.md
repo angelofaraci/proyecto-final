@@ -37,11 +37,10 @@
 - Consider `CallLogging`, `StatusPages`, health checks, and consistent error responses.
 - Document operational expectations for auth, database, and seed startup paths.
 
-### Web admin panel
+### ~~Web admin panel~~ ✅ (archived 2026-06-27)
 
-- Provide an administrator-facing panel accessible through the web.
-- Use it for operational/admin workflows that do not belong in the student or teacher mobile experience.
-- Technology stack is intentionally undecided; evaluate frontend/backend integration options when the slice is planned.
+- Delivered the administrator SPA with login gating, paginated user management, role updates, and all-course visibility.
+- Archive evidence: `openspec/changes/archive/2026-06-27-admin-web-panel/` (16/16 tasks; backend and SPA verification passed).
 
 ### ~~Versioned database migrations~~ ✅ (archived 2026-06-22)
 
@@ -50,15 +49,15 @@
 - `openspec/backlog.md` documents the rule: every future server schema change needs a matching Flyway migration script.
 - CI drift/checksum validation remains deferred.
 
-### Configurable KMP API base URL
+### ~~Configurable KMP API base URL~~ ✅ (archived 2026-06-22)
 
-- Replace hardcoded `http://10.0.2.2:8080` with environment/build configuration.
-- Support Android emulator, physical devices, iOS, desktop, staging, and production targets.
+- Delivered configurable API base URL resolution for Android, iOS, and JVM targets.
+- Archive evidence: `openspec/changes/archive/2026-06-22-configurable-api-base-url/` (8/8 tasks; verification passed with the documented manual iOS check).
 
-### Role naming cleanup
+### ~~Role naming cleanup~~ ✅ (archived 2026-06-22)
 
-- Decide whether the product language should use `LEARNER` or `STUDENT`.
-- Align shared models, specs, backend rules, UI copy, and documentation once decided.
+- Standardized product and code terminology on `STUDENT`, retaining backward-compatible parsing for legacy `LEARNER` values.
+- Archive evidence: `openspec/changes/archive/2026-06-22-role-naming-cleanup/` (23/23 tasks; 65 tests passing).
 
 ### Onboarding and navigation bug fixes
 

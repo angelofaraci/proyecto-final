@@ -9,7 +9,8 @@
 2. ✅ `versioned-db-migrations` — completed and archived.
 3. ✅ `lesson-read-access-control` — completed and archived.
 4. ✅ `onboarding-school-year` — completed and archived.
-5. Pick the next product track: learner-first (`exercise-practice-ui`) or classroom-first (`teacher-course-ownership`).
+5. ✅ Functional exercise practice is delivered: answer, submit, immediate feedback, and retry use `POST /exercises/{id}/attempt`; direct `POST /exercises/{id}/complete` remains `410 Gone`.
+6. Complete `ui-redesign-sync` Slice 6 and the outstanding manual visual acceptance for Slices 1–5, or switch product focus to `teacher-course-ownership`.
 
 ## Completed Slices
 
@@ -19,27 +20,28 @@
 | `theory-content-loading` | OpenSpec archived | Runtime theory loading, school-year filtering, role-scoped theory editing | 48 tests, 0 failures |
 | `lesson-progress-tracking` | OpenSpec archived | Exercise completion as atomic progress, lesson derivation from exercises, client-server progress sync | 35+ tests, 0 failures |
 | `configurable-api-base-url` | OpenSpec archived | Configurable base URL resolution for Android, iOS, and JVM targets | `:composeApp:jvmTest` + targeted platform checks |
-| `role-naming-cleanup` | OpenSpec archived | Rename `LEARNER` → `STUDENT` in shared models, server, compose app, and specs with backward-compatible parser | 64 tests, 0 failures — `:server:test`, `:composeApp:jvmTest` |
+| `role-naming-cleanup` | OpenSpec archived | Rename `LEARNER` → `STUDENT` in shared models, server, compose app, and specs with backward-compatible parser | 65 tests, 0 failures — `:server:test`, `:composeApp:jvmTest` |
 | `versioned-db-migrations` | OpenSpec archived | Flyway-based versioned migrations with baseline + guarded school-year follow-up migration | 30 tests, 0 failures — `:server:test` |
 | `lesson-read-access-control` | OpenSpec archived | Canonical lesson-read visibility and answer-masking reconciliation; theory read-access spec synced to existing backend behavior | 42 tests, 0 failures — `:server:test` |
 | `onboarding-school-year` | OpenSpec archived | Province-aware learner onboarding, school-year capture, onboarding gate routing, and course filtering foundations | `:composeApp:jvmTest` + `:composeApp:assembleDebug` |
+| `exercise-practice-ui` | Implemented functional flow | Type-specific answers, submit, immediate feedback, wrong-answer retry, and completion through `/attempt`; `/complete` returns `410 Gone` | Exercise player/ViewModel and repository contract tests |
 
 ## Next Slices (Ordered)
 
 ### Phase 1 — Learner Experience
 
-#### 1. `exercise-practice-ui`
-- **Scope**: Build the interactive exercise screen where learners answer, submit, and receive immediate feedback; wire to `POST /exercises/{id}/attempt` while treating `POST /exercises/{id}/complete` as a deprecated `410 Gone` path.
-- **Rationale**: Completes the end-to-end exercise-completion flow that currently exists only at the API/repository layer.
-- **Dependencies**: `exercise-completion` (delivered), `lesson-progress-tracking` (delivered), `onboarding-school-year`.
+#### 1. `ui-redesign-sync` — Slice 6 and visual acceptance
+- **Scope**: Redesign the existing exercise player, enrich `TheorySheet`, align onboarding and empty/loading states, and complete manual visual acceptance for Slices 1–5.
+- **Rationale**: The functional practice flow is already delivered; the remaining learner gap is visual/UX consistency and documented acceptance against the references.
+- **Dependencies**: Functional `exercise-practice-ui` (delivered), `lesson-progress-tracking` (delivered), `onboarding-school-year` (delivered).
 - **Affected modules**: `composeApp`.
-- **Expected verification**: `:composeApp:jvmTest`; manual end-to-end flow.
-- **Review-size risk**: **Medium-High** (~300–400 lines). Consider chained PRs: PR 1 = UI components, PR 2 = wiring + ViewModel.
+- **Expected verification**: Focused exercise/player/state tests, `:composeApp:jvmTest`, and manual visual comparison for Slices 1–6.
+- **Review-size risk**: **Medium-High** (~370 lines per current design). Keep this as the final `ui-redesign-sync` slice.
 
 #### 2. `gamification-rewards`
 - **Scope**: Streaks and reward feedback after exercise completion; derive from cumulative progress already synced.
 - **Rationale**: Gamified practice from the umbrella `learning` spec; depends on stable progress tracking.
-- **Dependencies**: `exercise-practice-ui`, `progress-sync` (delivered).
+- **Dependencies**: Functional `exercise-practice-ui` (delivered), `ui-redesign-sync` Slice 6, `progress-sync` (delivered).
 - **Affected modules**: `composeApp`.
 - **Expected verification**: `:composeApp:jvmTest`.
 - **Review-size risk**: **Medium** (~200–300 lines).
@@ -59,7 +61,7 @@
   - Each path needs `name`, `description`, `visible objective`, and a structured objective label; v1 supports only `grade-level`.
   - Entering a path shows a path summary first; the primary CTA opens the path view positioned on the first incomplete lesson rather than deep-linking into a lesson.
   - Completion rewards after 100% path progress belong to `gamification-rewards`, not `learning-paths` v1.
-- **Dependencies**: `exercise-practice-ui`, `lesson-progress-tracking` (delivered), `onboarding-school-year` (delivered).
+- **Dependencies**: Functional `exercise-practice-ui` (delivered), `lesson-progress-tracking` (delivered), `onboarding-school-year` (delivered).
 - **Affected modules**: `shared`, `server`, `composeApp`.
 - **Expected verification**: `:server:test`, `:composeApp:jvmTest`; manual onboarding, path switching, and progress-reuse validation.
 - **Review-size risk**: **High** (>400 lines). Plan as chained PRs if promoted.
@@ -75,8 +77,9 @@
 - **Review-size risk**: **Medium** (~250–350 lines). Consider chained PRs: PR 1 = backend ownership model + routes, PR 2 = client UI.
 
 #### 5. `classroom-join-codes`
-- **Scope**: Teacher creates a class and generates a join code; learner enrolls by entering the code.
-- **Rationale**: Core classroom feature from the umbrella `classroom` spec.
+- **Status**: **Partially delivered** — the backend join-by-code path and learner enrollment flow exist; teacher-owned class creation and join-code generation/product UI remain.
+- **Scope**: Complete the teacher side: create a class, generate/manage its join code, and expose the corresponding product UI without duplicating the delivered learner join flow.
+- **Rationale**: Finishes the remaining half of the umbrella `classroom` join-code capability.
 - **Dependencies**: `teacher-course-ownership`.
 - **Affected modules**: `server`, `shared`, `composeApp`.
 - **Expected verification**: `:server:test`, `:composeApp:jvmTest`.
@@ -94,9 +97,9 @@
 
 ## Recommended Next Slice
 
-**`exercise-practice-ui`**
-- `onboarding-school-year` is already archived, so the smallest learner-track continuation is now the exercise interaction flow.
-- It unlocks the rest of the learner progression track (`gamification-rewards` and later `learning-paths`) without reopening backend ownership rules yet.
+**`ui-redesign-sync` Slice 6 + manual visual acceptance**
+- The exercise interaction flow is functional; the smallest learner-track continuation is its pending visual/UX redesign plus acceptance of the already implemented redesign slices.
+- Completing it gives `gamification-rewards` a stable player surface without reopening backend ownership rules.
 - Alternative: `teacher-course-ownership` if product wants to switch immediately to the classroom-management track.
 
 ## Deferred / Non-Goals
@@ -136,8 +139,8 @@ These are explicitly out of scope for the current roadmap cycle. Revisit after P
 ## Dependency Graph (Simplified)
 
 ```
-lesson-read-access-control (archived) ──► teacher-course-ownership ──► classroom-join-codes ──► teacher-content-assignment
-onboarding-school-year (archived) ─────► exercise-practice-ui ───────► gamification-rewards ─────► learning-paths
+lesson-read-access-control (archived) ──► teacher-course-ownership ──► classroom-join-codes (partial) ──► teacher-content-assignment
+functional exercise practice (delivered) ──► ui-redesign-sync Slice 6 ──► gamification-rewards ──► learning-paths
 ```
 
 ## Maintenance
