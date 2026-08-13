@@ -3,6 +3,7 @@ package com.example.proyectofinal.data
 import com.example.proyectofinal.domain.CourseRepository
 import com.example.proyectofinal.db.AppDatabase
 import com.example.proyectofinal.models.Course
+import com.example.proyectofinal.models.CourseStudentsProgressResponse
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
@@ -39,6 +40,11 @@ class KtorCourseRepository(
         courses.forEach { insertCourseToLocal(it) }
         courses
     }
+
+    override suspend fun getStudentsProgress(courseId: String): CourseStudentsProgressResponse =
+        withContext(Dispatchers.IO) {
+            api.fetchStudentsProgress(courseId)
+        }
 
     override suspend fun createCourse(course: Course): Course = withContext(Dispatchers.IO) {
         val created = api.createCourse(course)

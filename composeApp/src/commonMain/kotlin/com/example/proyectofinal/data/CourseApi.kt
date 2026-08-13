@@ -3,6 +3,7 @@ package com.example.proyectofinal.data
 import com.example.proyectofinal.di.ApiConfig
 import com.example.proyectofinal.models.Course
 import com.example.proyectofinal.models.CreateCourseRequest
+import com.example.proyectofinal.models.CourseStudentsProgressResponse
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -31,6 +32,10 @@ class CourseApi(
 
     suspend fun fetchEnrolledCourses(userId: String): List<Course> {
         return client.get("$baseUrl/courses/enrolled/$userId").body()
+    }
+
+    suspend fun fetchStudentsProgress(courseId: String): CourseStudentsProgressResponse {
+        return client.get("$baseUrl/courses/$courseId/students/progress").body()
     }
 
     suspend fun createCourse(course: Course): Course {

@@ -6,6 +6,8 @@ import com.example.proyectofinal.db.*
 import com.example.proyectofinal.di.ApiConfig
 import com.example.proyectofinal.di.userRoleColumnAdapter
 import com.example.proyectofinal.models.Course
+import com.example.proyectofinal.models.CourseStudentProgress
+import com.example.proyectofinal.models.CourseStudentsProgressResponse
 import io.ktor.client.*
 import io.ktor.client.engine.mock.*
 import io.ktor.client.plugins.contentnegotiation.*
@@ -293,6 +295,41 @@ class KtorCourseRepositoryTest {
         assertEquals("New Course", created.title)
         val dbCourse = database.appDatabaseQueries.selectCourseById("new-course").executeAsOne()
         assertEquals("New Course", dbCourse.title)
+    }
+
+    @Test
+    fun `getStudentsProgress fetches roster without caching it`() = runTest {
+        val response = CourseStudentsProgressResponse(
+            courseId = "course-roster",
+            courseTitle = "Roster",
+            totalLessons = 3,
+            students = listOf(
+                CourseStudentProgress(
+                    studentId = "student-1",
+                    studentName = "Student One",
+                    completedLessons = 2,
+                    completedExercises = 4,
+                    progressPercentage = 66
+                )
+            )
+        )
+        val mockEngine = MockEngine { request ->
+            assertEquals("/courses/course-roster/students/progress", request.url.encodedPath)
+            respond(
+                content = json.encodeToString(response),
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json")
+            )
+        }
+        val httpClient = HttpClient(mockEngine) {
+            install(ContentNegotiation) { json(json) }
+        }
+
+        val result = KtorCourseRepository(CourseApi(httpClient, apiConfig), database)
+            .getStudentsProgress("course-roster")
+
+        assertEquals(response, result)
+        assertEquals(0, database.appDatabaseQueries.selectAllCourses().executeAsList().size)
     }
 
     @Test

@@ -16,6 +16,7 @@ import com.example.proyectofinal.models.AuthResponse
 import com.example.proyectofinal.models.ChoiceOption
 import com.example.proyectofinal.models.CompleteLessonRequest
 import com.example.proyectofinal.models.Course
+import com.example.proyectofinal.models.CourseStudentsProgressResponse
 import com.example.proyectofinal.models.ExerciseAttemptRequest
 import com.example.proyectofinal.models.ExerciseAttemptResponse
 import com.example.proyectofinal.models.CreateExerciseRequest
@@ -420,6 +421,85 @@ class ServerIntegrationTest {
         val created = response.body<Course>()
         assertEquals("regular-course-admin", created.creatorId)
         assertEquals(false, created.isOfficial)
+    }
+
+    @Test
+    fun `course progress roster is visible only to its teacher owner and admins`() = testApplication {
+        setupTestDatabase()
+        application { module(initDatabase = false, seedData = false) }
+        val jsonClient = createClient {
+            install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
+        }
+
+        transaction {
+            listOf(
+                Triple("roster-owner", "TEACHER", "owner@example.com"),
+                Triple("roster-other", "TEACHER", "other@example.com"),
+                Triple("roster-student", "STUDENT", "student@example.com"),
+                Triple("roster-admin", "ADMIN", "admin@example.com")
+            ).forEach { (userId, userRole, userEmail) ->
+                Users.insert {
+                    it[id] = userId; it[name] = userId; it[email] = userEmail
+                    it[passwordHash] = "hash"; it[role] = userRole
+                }
+            }
+            Courses.insert {
+                it[id] = "secured-roster-course"; it[title] = "Secured roster"
+                it[description] = "Roster"; it[creatorId] = "roster-owner"; it[isOfficial] = false
+            }
+            EnrolledCourses.insert {
+                it[userId] = "roster-student"; it[courseId] = "secured-roster-course"
+            }
+        }
+
+        suspend fun requestAs(userId: String, role: UserRole) =
+            jsonClient.get("/courses/secured-roster-course/students/progress") {
+                bearerAuth(Security.generateToken(userId, role.name))
+            }
+
+        val ownerResponse = requestAs("roster-owner", UserRole.TEACHER)
+        val otherTeacherResponse = requestAs("roster-other", UserRole.TEACHER)
+        val studentResponse = requestAs("roster-student", UserRole.STUDENT)
+        val adminResponse = requestAs("roster-admin", UserRole.ADMIN)
+        val missingResponse = jsonClient.get("/courses/missing-course/students/progress") {
+            bearerAuth(Security.generateToken("roster-owner", UserRole.TEACHER.name))
+        }
+
+        assertEquals(HttpStatusCode.OK, ownerResponse.status)
+        assertEquals(listOf("roster-student"), ownerResponse.body<CourseStudentsProgressResponse>().students.map { it.studentId })
+        assertEquals(HttpStatusCode.Forbidden, otherTeacherResponse.status)
+        assertEquals(HttpStatusCode.Forbidden, studentResponse.status)
+        assertEquals(HttpStatusCode.OK, adminResponse.status)
+        assertEquals(HttpStatusCode.NotFound, missingResponse.status)
+    }
+
+    @Test
+    fun `student matching legacy course creator id cannot read progress roster`() = testApplication {
+        setupTestDatabase()
+        application { module(initDatabase = false, seedData = false) }
+
+        transaction {
+            Users.insert {
+                it[id] = "legacy-student-owner"; it[name] = "Legacy Student"
+                it[email] = "legacy-student-owner@example.com"; it[passwordHash] = "hash"
+                it[role] = UserRole.STUDENT.name
+            }
+            Courses.insert {
+                it[id] = "legacy-student-owned-course"; it[title] = "Legacy Course"
+                it[description] = "Imported data"; it[creatorId] = "legacy-student-owner"
+                it[isOfficial] = false
+            }
+            EnrolledCourses.insert {
+                it[userId] = "legacy-student-owner"; it[courseId] = "legacy-student-owned-course"
+            }
+        }
+
+        val response = client.get("/courses/legacy-student-owned-course/students/progress") {
+            bearerAuth(Security.generateToken("legacy-student-owner", UserRole.STUDENT.name))
+        }
+
+        assertEquals(HttpStatusCode.Forbidden, response.status)
+        assertEquals("Forbidden", response.body<String>())
     }
 
     @Test

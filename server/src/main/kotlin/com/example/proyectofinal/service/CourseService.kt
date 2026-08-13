@@ -1,12 +1,17 @@
 package com.example.proyectofinal.service
 
 import com.example.proyectofinal.database.Courses
+import com.example.proyectofinal.database.CompletedExercises
+import com.example.proyectofinal.database.CompletedLessons
 import com.example.proyectofinal.database.EnrolledCourses
 import com.example.proyectofinal.database.Lessons
+import com.example.proyectofinal.database.Exercises
 import com.example.proyectofinal.database.Users
 import com.example.proyectofinal.database.dbQuery
 import com.example.proyectofinal.models.AdminCourseResponse
 import com.example.proyectofinal.models.Course
+import com.example.proyectofinal.models.CourseStudentProgress
+import com.example.proyectofinal.models.CourseStudentsProgressResponse
 import com.example.proyectofinal.models.CreateCourseRequest
 import com.example.proyectofinal.models.UpdateCourseRequest
 import com.example.proyectofinal.models.UserRole
@@ -124,6 +129,72 @@ class CourseService {
                 .where { Courses.id inList courseIds }
                 .map { it.toCourse() }
         }
+    }
+
+    fun getStudentsProgress(courseId: String): CourseStudentsProgressResponse? = dbQuery {
+        val course = Courses.selectAll()
+            .where { Courses.id eq courseId }
+            .firstOrNull()
+            ?: return@dbQuery null
+
+        val lessonIds = Lessons.select(Lessons.id)
+            .where { Lessons.courseId eq courseId }
+            .map { it[Lessons.id] }
+        val exerciseIds = if (lessonIds.isEmpty()) {
+            emptyList()
+        } else {
+            Exercises.select(Exercises.id)
+                .where { Exercises.lessonId inList lessonIds }
+                .map { it[Exercises.id] }
+        }
+        val enrolledUserIds = EnrolledCourses.select(EnrolledCourses.userId)
+            .where { EnrolledCourses.courseId eq courseId }
+            .map { it[EnrolledCourses.userId] }
+
+        val students = enrolledUserIds.mapNotNull { studentId ->
+            val student = Users.select(Users.id, Users.name, Users.role)
+                .where { Users.id eq studentId }
+                .firstOrNull()
+                ?: return@mapNotNull null
+            if (UserRole.parse(student[Users.role]) != UserRole.STUDENT) {
+                return@mapNotNull null
+            }
+            val completedLessonCount = if (lessonIds.isEmpty()) 0 else {
+                CompletedLessons.select(CompletedLessons.lessonId)
+                    .where {
+                        (CompletedLessons.userId eq studentId) and
+                            (CompletedLessons.lessonId inList lessonIds)
+                    }
+                    .map { it[CompletedLessons.lessonId] }
+                    .distinct()
+                    .size
+            }
+            val completedExerciseCount = if (exerciseIds.isEmpty()) 0 else {
+                CompletedExercises.select(CompletedExercises.exerciseId)
+                    .where {
+                        (CompletedExercises.userId eq studentId) and
+                            (CompletedExercises.exerciseId inList exerciseIds)
+                    }
+                    .map { it[CompletedExercises.exerciseId] }
+                    .distinct()
+                    .size
+            }
+
+            CourseStudentProgress(
+                studentId = student[Users.id],
+                studentName = student[Users.name],
+                completedLessons = completedLessonCount,
+                completedExercises = completedExerciseCount,
+                progressPercentage = if (lessonIds.isEmpty()) 0 else completedLessonCount * 100 / lessonIds.size
+            )
+        }.sortedWith(compareBy(CourseStudentProgress::studentName, CourseStudentProgress::studentId))
+
+        CourseStudentsProgressResponse(
+            courseId = course[Courses.id],
+            courseTitle = course[Courses.title],
+            totalLessons = lessonIds.size,
+            students = students
+        )
     }
 
     fun createCourse(

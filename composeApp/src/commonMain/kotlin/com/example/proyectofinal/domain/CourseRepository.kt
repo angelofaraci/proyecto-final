@@ -1,6 +1,7 @@
 package com.example.proyectofinal.domain
 
 import com.example.proyectofinal.models.Course
+import com.example.proyectofinal.models.CourseStudentsProgressResponse
 
 interface CourseRepository {
     /**
@@ -22,6 +23,9 @@ interface CourseRepository {
      * Fetches courses a user has joined via join codes.
      */
     suspend fun getEnrolledCourses(userId: String): List<Course>
+
+    /** Fetches the network-only progress roster for a course owned by the caller. */
+    suspend fun getStudentsProgress(courseId: String): CourseStudentsProgressResponse
 
     /**
      * Creates a new user course.

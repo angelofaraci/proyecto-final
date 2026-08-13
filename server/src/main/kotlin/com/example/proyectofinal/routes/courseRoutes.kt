@@ -56,6 +56,26 @@ fun Application.courseRoutes(service: CourseService) {
                 call.respond(service.getCoursesByCreator(creatorId))
             }
 
+            get("/courses/{courseId}/students/progress") {
+                val courseId = call.parameters["courseId"]
+                    ?: return@get call.respond(HttpStatusCode.BadRequest)
+                val creatorId = service.getCreatorId(courseId)
+                    ?: return@get call.respond(HttpStatusCode.NotFound)
+                val userId = call.currentUserId()
+                    ?: return@get call.respond(HttpStatusCode.Unauthorized, "Invalid or expired token")
+                val role = call.currentRole()
+                    ?: return@get call.respond(HttpStatusCode.Unauthorized, "Invalid or expired token")
+                val canReadRoster = role == UserRole.ADMIN ||
+                    (role == UserRole.TEACHER && userId == creatorId)
+                if (!canReadRoster) {
+                    return@get call.respond(HttpStatusCode.Forbidden, "Forbidden")
+                }
+
+                val progress = service.getStudentsProgress(courseId)
+                    ?: return@get call.respond(HttpStatusCode.NotFound)
+                call.respond(progress)
+            }
+
             get("/courses/enrolled/{userId}") {
                 val userId = call.parameters["userId"] ?: return@get call.respond(HttpStatusCode.BadRequest)
                 if (!call.requireSelfOrAdmin(userId)) return@get

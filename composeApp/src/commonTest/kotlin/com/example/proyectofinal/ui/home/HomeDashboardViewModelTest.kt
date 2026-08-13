@@ -317,6 +317,8 @@ private class FakeHomeDashboardCourseRepository(
 
     override suspend fun getMyCreatedCourses(creatorId: String): List<Course> = emptyList()
 
+    override suspend fun getStudentsProgress(courseId: String) = error("Not used")
+
     override suspend fun getEnrolledCourses(userId: String): List<Course> {
         if (cancelCourseFetch) throw CancellationException("Course fetch cancelled")
         coursesErrorMessage?.let { throw IllegalStateException(it) }

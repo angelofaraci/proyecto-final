@@ -213,6 +213,8 @@ private class FakeCourseRepository(
 
     override suspend fun getEnrolledCourses(userId: String): List<Course> = emptyList()
 
+    override suspend fun getStudentsProgress(courseId: String) = error("Not used")
+
     override suspend fun createCourse(course: Course): Course = course
 
     override suspend fun updateCourse(course: Course): Course = course
