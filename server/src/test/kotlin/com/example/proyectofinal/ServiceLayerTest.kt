@@ -106,14 +106,14 @@ class CourseServiceTest {
                 id = "created-course",
                 title = "Created Course",
                 description = "Created description",
-                creatorId = "teacher-1",
                 joinCode = "JOIN123",
                 schoolYear = 5,
                 topic = "Álgebra",
                 difficulty = "Intermedio",
                 durationMinutes = 30,
                 xpReward = 80
-            )
+            ),
+            creatorId = "teacher-1"
         )
 
         assertEquals("created-course", created.id)

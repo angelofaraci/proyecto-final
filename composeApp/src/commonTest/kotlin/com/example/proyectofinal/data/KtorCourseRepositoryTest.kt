@@ -10,12 +10,14 @@ import io.ktor.client.*
 import io.ktor.client.engine.mock.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.http.*
+import io.ktor.http.content.OutgoingContent
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 
 class KtorCourseRepositoryTest {
     private lateinit var database: AppDatabase
@@ -262,11 +264,17 @@ class KtorCourseRepositoryTest {
 
         val mockEngine = MockEngine { request ->
             when (request.url.encodedPath) {
-                "/courses" -> respond(
-                    content = json.encodeToString(newCourse),
-                    status = HttpStatusCode.Created,
-                    headers = headersOf(HttpHeaders.ContentType, "application/json")
-                )
+                "/courses" -> {
+                    val requestBody = request.body as OutgoingContent.ByteArrayContent
+                    val requestJson = requestBody.bytes().decodeToString()
+                    assertFalse(requestJson.contains("creatorId"))
+                    assertFalse(requestJson.contains("isOfficial"))
+                    respond(
+                        content = json.encodeToString(newCourse),
+                        status = HttpStatusCode.Created,
+                        headers = headersOf(HttpHeaders.ContentType, "application/json")
+                    )
+                }
                 else -> error("Unexpected request: ${request.url.encodedPath}")
             }
         }

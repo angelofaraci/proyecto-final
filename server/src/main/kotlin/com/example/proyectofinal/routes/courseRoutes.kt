@@ -3,6 +3,7 @@ package com.example.proyectofinal.routes
 import com.example.proyectofinal.models.CreateCourseRequest
 import com.example.proyectofinal.models.JoinCourseRequest
 import com.example.proyectofinal.models.UpdateCourseRequest
+import com.example.proyectofinal.models.UserRole
 import com.example.proyectofinal.plugins.currentRole
 import com.example.proyectofinal.plugins.currentUserId
 import com.example.proyectofinal.plugins.requireSelfOrAdmin
@@ -63,10 +64,17 @@ fun Application.courseRoutes(service: CourseService) {
             }
 
             post("/courses") {
-                val request = call.receive<CreateCourseRequest>()
-                if (!call.requireSelfOrAdmin(request.creatorId)) return@post
+                val userId = call.currentUserId()
+                    ?: return@post call.respond(HttpStatusCode.Unauthorized, "Invalid or expired token")
+                val role = call.currentRole()
+                    ?: return@post call.respond(HttpStatusCode.Unauthorized, "Invalid or expired token")
 
-                call.respond(service.createCourse(request))
+                if (role != UserRole.TEACHER && role != UserRole.ADMIN) {
+                    return@post call.respond(HttpStatusCode.Forbidden, "Forbidden")
+                }
+
+                val request = call.receive<CreateCourseRequest>()
+                call.respond(service.createCourse(request, creatorId = userId))
             }
 
             put("/courses/{id}") {

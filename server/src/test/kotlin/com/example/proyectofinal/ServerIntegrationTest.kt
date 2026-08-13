@@ -323,6 +323,106 @@ class ServerIntegrationTest {
     }
 
     @Test
+    fun `student cannot create a course`() = testApplication {
+        setupTestDatabase()
+        application { module(initDatabase = false, seedData = false) }
+
+        transaction {
+            Users.insert {
+                it[id] = "student-course-creator"
+                it[name] = "Student Creator"
+                it[email] = "student-course-creator@example.com"
+                it[passwordHash] = "hash"
+                it[role] = UserRole.STUDENT.name
+            }
+        }
+
+        val response = client.post("/courses") {
+            bearerAuth(Security.generateToken("student-course-creator", UserRole.STUDENT.name))
+            header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            setBody(
+                """{"id":"student-course","title":"Forbidden","description":"Forbidden","creatorId":"student-course-creator"}"""
+            )
+        }
+
+        assertEquals(HttpStatusCode.Forbidden, response.status)
+        transaction {
+            assertTrue(Courses.selectAll().where { Courses.id eq "student-course" }.none())
+        }
+    }
+
+    @Test
+    fun `teacher course creation derives ownership and official status from server policy`() = testApplication {
+        setupTestDatabase()
+        application { module(initDatabase = false, seedData = false) }
+
+        val jsonClient = createClient {
+            install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
+        }
+
+        transaction {
+            Users.insert {
+                it[id] = "teacher-course-creator"
+                it[name] = "Teacher Creator"
+                it[email] = "teacher-course-creator@example.com"
+                it[passwordHash] = "hash"
+                it[role] = UserRole.TEACHER.name
+            }
+        }
+
+        val response = jsonClient.post("/courses") {
+            bearerAuth(Security.generateToken("teacher-course-creator", UserRole.TEACHER.name))
+            header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            setBody(
+                """{"id":"teacher-created-course","title":"Teacher Course","description":"Teacher owned","creatorId":"attacker-selected-owner","isOfficial":true}"""
+            )
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        val created = response.body<Course>()
+        assertEquals("teacher-course-creator", created.creatorId)
+        assertEquals(false, created.isOfficial)
+        transaction {
+            val persisted = Courses.selectAll().where { Courses.id eq "teacher-created-course" }.single()
+            assertEquals("teacher-course-creator", persisted[Courses.creatorId])
+            assertEquals(false, persisted[Courses.isOfficial])
+        }
+    }
+
+    @Test
+    fun `admin can create a regular course owned by the authenticated principal`() = testApplication {
+        setupTestDatabase()
+        application { module(initDatabase = false, seedData = false) }
+
+        val jsonClient = createClient {
+            install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
+        }
+
+        transaction {
+            Users.insert {
+                it[id] = "regular-course-admin"
+                it[name] = "Course Admin"
+                it[email] = "regular-course-admin@example.com"
+                it[passwordHash] = "hash"
+                it[role] = UserRole.ADMIN.name
+            }
+        }
+
+        val response = jsonClient.post("/courses") {
+            bearerAuth(Security.generateToken("regular-course-admin", UserRole.ADMIN.name))
+            header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            setBody(
+                """{"id":"admin-regular-course","title":"Admin Regular Course","description":"Non-official","creatorId":"another-user","isOfficial":true}"""
+            )
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        val created = response.body<Course>()
+        assertEquals("regular-course-admin", created.creatorId)
+        assertEquals(false, created.isOfficial)
+    }
+
+    @Test
     fun `official courses support school year filtering and reject invalid filters`() = testApplication {
         setupTestDatabase()
 

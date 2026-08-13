@@ -126,13 +126,17 @@ class CourseService {
         }
     }
 
-    fun createCourse(request: CreateCourseRequest): Course = dbQuery {
+    fun createCourse(
+        request: CreateCourseRequest,
+        creatorId: String,
+        isOfficial: Boolean = false
+    ): Course = dbQuery {
         Courses.insert {
             it[Courses.id] = request.id
             it[Courses.title] = request.title
             it[Courses.description] = request.description
-            it[Courses.creatorId] = request.creatorId
-            it[Courses.isOfficial] = request.isOfficial
+            it[Courses.creatorId] = creatorId
+            it[Courses.isOfficial] = isOfficial
             it[Courses.schoolYear] = request.schoolYear
             it[Courses.joinCode] = request.joinCode
             it[Courses.topic] = request.topic
@@ -145,8 +149,8 @@ class CourseService {
             id = request.id,
             title = request.title,
             description = request.description,
-            creatorId = request.creatorId,
-            isOfficial = request.isOfficial,
+            creatorId = creatorId,
+            isOfficial = isOfficial,
             joinCode = request.joinCode,
             schoolYear = request.schoolYear,
             topic = request.topic,
@@ -174,15 +178,15 @@ class CourseService {
                     id = request.id,
                     title = request.title,
                     description = request.description,
-                    creatorId = authenticatedUserId,
-                    isOfficial = request.isOfficial,
                     joinCode = null,
                     schoolYear = request.schoolYear,
                     topic = request.topic,
                     difficulty = request.difficulty,
                     durationMinutes = request.durationMinutes,
                     xpReward = request.xpReward
-                )
+                ),
+                creatorId = authenticatedUserId,
+                isOfficial = request.isOfficial
             )
         )
     }
