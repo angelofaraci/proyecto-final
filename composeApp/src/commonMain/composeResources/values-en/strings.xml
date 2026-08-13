@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="teacher_dashboard_title">Teacher dashboard</string>
+    <string name="teacher_action_logout">Log out</string>
+    <string name="teacher_create_title">Course title</string>
+    <string name="teacher_create_description">Description</string>
+    <string name="teacher_action_create">Create course</string>
+    <string name="teacher_courses_title">My courses</string>
+    <string name="teacher_courses_empty">You have not created any courses yet.</string>
+    <string name="teacher_progress_empty">This course has no enrolled students yet.</string>
+    <string name="teacher_student_metrics">Lessons: %1$d · Exercises: %2$d · Progress: %3$d%</string>
+    <string name="teacher_error">We could not load the teacher dashboard.</string>
+    <string name="teacher_action_retry">Retry</string>
     <string name="onboarding_title">Complete your onboarding</string>
     <string name="onboarding_action_continue">Continue</string>
     <string name="onboarding_action_back">Back</string>

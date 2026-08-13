@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="teacher_dashboard_title">Panel docente</string>
+    <string name="teacher_action_logout">Cerrar sesión</string>
+    <string name="teacher_create_title">Título del curso</string>
+    <string name="teacher_create_description">Descripción</string>
+    <string name="teacher_action_create">Crear curso</string>
+    <string name="teacher_courses_title">Mis cursos</string>
+    <string name="teacher_courses_empty">Todavía no creaste cursos.</string>
+    <string name="teacher_progress_empty">Este curso todavía no tiene estudiantes inscriptos.</string>
+    <string name="teacher_student_metrics">Lecciones: %1$d · Ejercicios: %2$d · Progreso: %3$d%</string>
+    <string name="teacher_error">No pudimos cargar el panel docente.</string>
+    <string name="teacher_action_retry">Reintentar</string>
     <string name="onboarding_title">Completa tu perfil</string>
     <string name="onboarding_action_continue">Continuar</string>
     <string name="onboarding_action_back">Volver</string>
