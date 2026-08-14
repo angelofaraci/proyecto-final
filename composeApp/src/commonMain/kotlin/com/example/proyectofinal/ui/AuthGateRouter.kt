@@ -16,7 +16,7 @@ enum class AuthScreenTarget { LOGIN, REGISTER }
  * take precedence over the form targets once an [AuthSession] is authenticated,
  * so neither Login nor Register is shown in that case.
  */
-enum class AuthView { COURSE, LOGIN, REGISTER, ONBOARDING }
+enum class AuthView { COURSE, TEACHER, LOGIN, REGISTER, ONBOARDING }
 
 /**
  * Retained state holder for the auth-gate routing decision.
@@ -67,7 +67,9 @@ fun resolveAuthView(
     target: AuthScreenTarget,
     onboardingComplete: Boolean
 ): AuthView =
-    if (session.isAuthenticated) {
+    if (session.user?.role == com.example.proyectofinal.models.UserRole.TEACHER) {
+        AuthView.TEACHER
+    } else if (session.isAuthenticated) {
         if (onboardingComplete) AuthView.COURSE else AuthView.ONBOARDING
     }
     else when (target) {

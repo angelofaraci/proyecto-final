@@ -63,6 +63,36 @@ data class Course(
 )
 
 @Serializable
+data class CreateCourseRequest(
+    val id: String,
+    val title: String,
+    val description: String,
+    val joinCode: String? = null,
+    val schoolYear: Int = 0,
+    val topic: String? = null,
+    val difficulty: String? = null,
+    val durationMinutes: Int? = null,
+    val xpReward: Int? = null
+)
+
+@Serializable
+data class CourseStudentsProgressResponse(
+    val courseId: String,
+    val courseTitle: String,
+    val totalLessons: Int,
+    val students: List<CourseStudentProgress>
+)
+
+@Serializable
+data class CourseStudentProgress(
+    val studentId: String,
+    val studentName: String,
+    val completedLessons: Int,
+    val completedExercises: Int,
+    val progressPercentage: Int
+)
+
+@Serializable
 data class Lesson(
     val id: String,
     val courseId: String? = null,

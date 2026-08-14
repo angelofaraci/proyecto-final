@@ -112,6 +112,32 @@ class AuthGateViewModelTest {
     }
 
     @Test
+    fun `teacher bypasses learner onboarding and routes to teacher dashboard`() {
+        val teacher = AuthSession(
+            token = "teacher-token",
+            user = User("teacher-1", "Teacher", "teacher@example.com", UserRole.TEACHER)
+        )
+
+        assertEquals(
+            AuthView.TEACHER,
+            resolveAuthView(teacher, AuthScreenTarget.LOGIN, onboardingComplete = false)
+        )
+    }
+
+    @Test
+    fun `admin keeps existing onboarding routing`() {
+        val admin = AuthSession(
+            token = "admin-token",
+            user = User("admin-1", "Admin", "admin@example.com", UserRole.ADMIN)
+        )
+
+        assertEquals(
+            AuthView.ONBOARDING,
+            resolveAuthView(admin, AuthScreenTarget.LOGIN, onboardingComplete = false)
+        )
+    }
+
+    @Test
     fun `register target remains selected when the view model is reused`() {
         val viewModel = AuthGateViewModel()
 

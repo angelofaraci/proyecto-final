@@ -2,6 +2,7 @@ package com.example.proyectofinal.data
 
 import com.example.proyectofinal.domain.CourseRepository
 import com.example.proyectofinal.models.Course
+import com.example.proyectofinal.models.CourseStudentsProgressResponse
 import com.example.proyectofinal.models.Lesson
 import kotlin.random.Random
 
@@ -38,6 +39,16 @@ class MockCourseRepository : CourseRepository {
 
     override suspend fun getEnrolledCourses(userId: String): List<Course> = 
         mockCourses.filter { it.creatorId != "admin" && it.creatorId != userId }
+
+    override suspend fun getStudentsProgress(courseId: String): CourseStudentsProgressResponse {
+        val course = mockCourses.first { it.id == courseId }
+        return CourseStudentsProgressResponse(
+            courseId = course.id,
+            courseTitle = course.title,
+            totalLessons = course.lessons.size,
+            students = emptyList()
+        )
+    }
 
     override suspend fun createCourse(course: Course): Course {
         val newCourse = course.copy(

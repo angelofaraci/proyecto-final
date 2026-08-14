@@ -15,6 +15,7 @@ import com.example.proyectofinal.models.ExerciseAttemptRequest
 import com.example.proyectofinal.models.CreateCourseRequest
 import com.example.proyectofinal.models.CreateExerciseRequest
 import com.example.proyectofinal.models.CreateLessonRequest
+import com.example.proyectofinal.models.CourseStudentsProgressResponse
 import com.example.proyectofinal.models.ExerciseType
 import com.example.proyectofinal.models.InputValueSubmission
 import com.example.proyectofinal.models.MultiSelectSubmission
@@ -96,6 +97,60 @@ class CourseServiceTest {
     }
 
     @Test
+    fun `course roster progress counts only enrolled students and course content`() {
+        insertUser(id = "teacher-roster", role = UserRole.TEACHER)
+        insertUser(id = "student-roster", role = UserRole.STUDENT, name = "Roster Student")
+        insertUser(id = "student-not-enrolled", role = UserRole.STUDENT)
+        insertCourse(id = "roster-course", creatorId = "teacher-roster", title = "Roster Course")
+        insertCourse(id = "other-course", creatorId = "teacher-roster")
+        insertLesson(id = "roster-lesson-1", courseId = "roster-course")
+        insertLesson(id = "roster-lesson-2", courseId = "roster-course")
+        insertLesson(id = "roster-lesson-3", courseId = "roster-course")
+        insertLesson(id = "other-lesson", courseId = "other-course")
+        insertExercise(id = "roster-exercise-1", lessonId = "roster-lesson-1")
+        insertExercise(id = "roster-exercise-2", lessonId = "roster-lesson-2")
+        insertExercise(id = "other-exercise", lessonId = "other-lesson")
+        enrollUser(userId = "student-roster", courseId = "roster-course")
+        enrollUser(userId = "teacher-roster", courseId = "roster-course")
+
+        transaction {
+            CompletedLessons.insert { it[userId] = "student-roster"; it[lessonId] = "roster-lesson-1" }
+            CompletedLessons.insert { it[userId] = "student-roster"; it[lessonId] = "roster-lesson-2" }
+            CompletedLessons.insert { it[userId] = "student-roster"; it[lessonId] = "other-lesson" }
+            CompletedExercises.insert { it[userId] = "student-roster"; it[exerciseId] = "roster-exercise-1"; it[score] = 10 }
+            CompletedExercises.insert { it[userId] = "student-roster"; it[exerciseId] = "other-exercise"; it[score] = 10 }
+        }
+
+        val response: CourseStudentsProgressResponse = CourseService().getStudentsProgress("roster-course")!!
+
+        assertEquals("roster-course", response.courseId)
+        assertEquals("Roster Course", response.courseTitle)
+        assertEquals(3, response.totalLessons)
+        assertEquals(1, response.students.size)
+        with(response.students.single()) {
+            assertEquals("student-roster", studentId)
+            assertEquals("Roster Student", studentName)
+            assertEquals(2, completedLessons)
+            assertEquals(1, completedExercises)
+            assertEquals(66, progressPercentage)
+        }
+    }
+
+    @Test
+    fun `course roster progress handles empty courses and missing courses`() {
+        insertUser(id = "teacher-empty", role = UserRole.TEACHER)
+        insertUser(id = "student-empty", role = UserRole.STUDENT)
+        insertCourse(id = "empty-course", creatorId = "teacher-empty")
+        enrollUser(userId = "student-empty", courseId = "empty-course")
+
+        val response = CourseService().getStudentsProgress("empty-course")!!
+
+        assertEquals(0, response.totalLessons)
+        assertEquals(0, response.students.single().progressPercentage)
+        assertEquals(null, CourseService().getStudentsProgress("missing-course"))
+    }
+
+    @Test
     fun `course service mutation methods persist changes`() {
         insertUser(id = "teacher-1", role = UserRole.TEACHER)
         insertUser(id = "student-1", role = UserRole.STUDENT)
@@ -106,14 +161,14 @@ class CourseServiceTest {
                 id = "created-course",
                 title = "Created Course",
                 description = "Created description",
-                creatorId = "teacher-1",
                 joinCode = "JOIN123",
                 schoolYear = 5,
                 topic = "Álgebra",
                 difficulty = "Intermedio",
                 durationMinutes = 30,
                 xpReward = 80
-            )
+            ),
+            creatorId = "teacher-1"
         )
 
         assertEquals("created-course", created.id)

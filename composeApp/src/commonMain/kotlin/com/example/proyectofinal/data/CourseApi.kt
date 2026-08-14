@@ -2,6 +2,8 @@ package com.example.proyectofinal.data
 
 import com.example.proyectofinal.di.ApiConfig
 import com.example.proyectofinal.models.Course
+import com.example.proyectofinal.models.CreateCourseRequest
+import com.example.proyectofinal.models.CourseStudentsProgressResponse
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -32,10 +34,26 @@ class CourseApi(
         return client.get("$baseUrl/courses/enrolled/$userId").body()
     }
 
+    suspend fun fetchStudentsProgress(courseId: String): CourseStudentsProgressResponse {
+        return client.get("$baseUrl/courses/$courseId/students/progress").body()
+    }
+
     suspend fun createCourse(course: Course): Course {
         return client.post("$baseUrl/courses") {
             contentType(ContentType.Application.Json)
-            setBody(course)
+            setBody(
+                CreateCourseRequest(
+                    id = course.id,
+                    title = course.title,
+                    description = course.description,
+                    joinCode = course.joinCode,
+                    schoolYear = course.schoolYear,
+                    topic = course.topic,
+                    difficulty = course.difficulty,
+                    durationMinutes = course.durationMinutes,
+                    xpReward = course.xpReward
+                )
+            )
         }.body()
     }
 

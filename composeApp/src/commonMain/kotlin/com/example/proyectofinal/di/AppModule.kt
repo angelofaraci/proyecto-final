@@ -34,6 +34,7 @@ import com.example.proyectofinal.ui.MainRouterViewModel
 import com.example.proyectofinal.ui.OnboardingViewModel
 import com.example.proyectofinal.ui.ProfileViewModel
 import com.example.proyectofinal.ui.RegisterViewModel
+import com.example.proyectofinal.ui.teacher.TeacherDashboardViewModel
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
@@ -65,6 +66,7 @@ val appModule = module {
     viewModelOf(::OnboardingViewModel)
     viewModelOf(::ProfileViewModel)
     viewModelOf(::RegisterViewModel)
+    viewModel { (teacherId: String) -> TeacherDashboardViewModel(get(), teacherId) }
 }
 
 internal val userRoleColumnAdapter = object : ColumnAdapter<UserRole, String> {

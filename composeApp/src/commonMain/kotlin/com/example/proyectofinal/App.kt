@@ -27,8 +27,12 @@ import com.example.proyectofinal.ui.OnboardingViewModel
 import com.example.proyectofinal.ui.RegisterScreen
 import com.example.proyectofinal.ui.RegisterViewModel
 import com.example.proyectofinal.ui.resolveAuthView
+import com.example.proyectofinal.ui.teacher.TeacherDashboardScreen
+import com.example.proyectofinal.ui.teacher.TeacherDashboardViewModel
+import com.example.proyectofinal.ui.teacher.teacherDashboardViewModelKey
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.parameter.parametersOf
 
 @Composable
 fun App() {
@@ -51,12 +55,15 @@ private fun AuthGate() {
     val target by router.target.collectAsState()
     var onboardingRefreshKey by remember(session.token) { mutableStateOf(0) }
     val onboardingComplete by produceState<Boolean?>(
-        initialValue = if (session.isAuthenticated) null else false,
+        initialValue = if (session.user?.role == com.example.proyectofinal.models.UserRole.TEACHER) true
+            else if (session.isAuthenticated) null else false,
         keys = arrayOf<Any?>(session.isAuthenticated, session.token, session.user?.id, onboardingRefreshKey)
     ) {
         val userId = session.user?.id
         value =
-            if (session.isAuthenticated && !userId.isNullOrBlank()) {
+            if (session.user?.role == com.example.proyectofinal.models.UserRole.TEACHER) {
+                true
+            } else if (session.isAuthenticated && !userId.isNullOrBlank()) {
                 learnerProfileRepository.isOnboardingComplete(userId)
             } else {
                 false
@@ -72,6 +79,15 @@ private fun AuthGate() {
 
     when (resolveAuthView(session, target, onboardingComplete = onboardingComplete ?: false)) {
         AuthView.COURSE -> AuthenticatedHomeScaffold(onLogout = authRepository::logout)
+
+        AuthView.TEACHER -> TeacherDashboardScreen(
+            viewModel = koinViewModel<TeacherDashboardViewModel>(
+                key = teacherDashboardViewModelKey(requireNotNull(session.user).id)
+            ) {
+                parametersOf(requireNotNull(session.user).id)
+            },
+            onLogout = authRepository::logout
+        )
 
         AuthView.LOGIN -> LoginScreen(
             viewModel = koinViewModel<LoginViewModel>(),
