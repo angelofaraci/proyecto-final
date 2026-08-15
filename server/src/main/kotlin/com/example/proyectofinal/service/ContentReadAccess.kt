@@ -21,7 +21,7 @@ internal sealed interface LessonContentAccess {
 internal fun canReadCourseContent(access: CourseContentAccess, userId: String, role: UserRole): Boolean =
     when (role) {
         UserRole.ADMIN -> true
-        UserRole.TEACHER -> access.creatorId == userId
+        UserRole.TEACHER -> access.creatorId == userId || access.isOfficial
         UserRole.STUDENT -> access.isOfficial || isUserEnrolledInCourse(userId, access.courseId)
     }
 

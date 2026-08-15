@@ -17,6 +17,9 @@ The system SHALL enforce four visibility tiers when a user requests lesson conte
 | **owner** | Course creator (TEACHER) | `course.creatorId == userId` |
 | **admin** | Any ADMIN user | Role is `ADMIN` |
 
+A TEACHER MUST also be able to read any course where `isOfficial = true`, regardless of `creatorId`, consistent with the `official` tier already granted to any authenticated user.
+(Previously: TEACHER access was granted only when `course.creatorId == userId`, contradicting the `official` tier for non-owned official courses and causing Forbidden on official-course reads by non-creator teachers.)
+
 #### Scenario: Admin reads any lesson
 
 - GIVEN a lesson exists in any course
@@ -54,6 +57,12 @@ The system SHALL enforce four visibility tiers when a user requests lesson conte
 - GIVEN a lesson belongs to a course created by a different TEACHER
 - WHEN a non-creator TEACHER requests the lesson
 - THEN Forbidden is returned
+
+#### Scenario: Non-creator teacher reads official course lesson
+
+- GIVEN a lesson belongs to a course with `isOfficial = true` created by a different TEACHER
+- WHEN a non-creator TEACHER requests the lesson
+- THEN the lesson is returned with exercises (answers visible)
 
 #### Scenario: Non-existent lesson returns NotFound
 

@@ -17,7 +17,9 @@ import com.example.proyectofinal.models.CreateExerciseRequest
 import com.example.proyectofinal.models.CreateLessonRequest
 import com.example.proyectofinal.models.CourseStudentsProgressResponse
 import com.example.proyectofinal.models.ExerciseType
+import com.example.proyectofinal.models.InputValuePayload
 import com.example.proyectofinal.models.InputValueSubmission
+import com.example.proyectofinal.models.MultiSelectPayload
 import com.example.proyectofinal.models.MultiSelectSubmission
 import com.example.proyectofinal.models.MultipleChoicePayload
 import com.example.proyectofinal.models.MultipleChoiceSubmission
@@ -25,6 +27,7 @@ import com.example.proyectofinal.models.UpdateCourseRequest
 import com.example.proyectofinal.models.UpdateExerciseRequest
 import com.example.proyectofinal.models.UpdateLessonRequest
 import com.example.proyectofinal.models.UserRole
+import com.example.proyectofinal.seed.SeedData
 import com.example.proyectofinal.service.AdminLessonMutationResult
 import com.example.proyectofinal.service.AdminLessonPatchRequest
 import com.example.proyectofinal.service.AuthService
@@ -329,6 +332,18 @@ class LessonExerciseServiceTest {
             assertIs<LessonReadResult.Success>(
                 service.getLessonByIdForUser("official-lesson", "learner-other", UserRole.STUDENT)
             ).lesson.id
+        )
+        assertEquals(
+            "official-lesson",
+            assertIs<LessonReadResult.Success>(
+                service.getLessonByIdForUser("official-lesson", "teacher-other", UserRole.TEACHER)
+            ).lesson.id
+        )
+        assertEquals(
+            "official-course",
+            assertIs<CourseReadResult.Success>(
+                CourseService().getCourseByIdForUser("official-course", "teacher-other", UserRole.TEACHER)
+            ).course.id
         )
 
         val enrolledLesson = assertIs<LessonReadResult.Success>(
@@ -1271,6 +1286,114 @@ class UserServiceTest {
 
         val invalid = assertIs<ExerciseAttemptResult.InvalidRequest>(result)
         assertTrue(invalid.message.contains("submission type"))
+    }
+}
+
+class SeedDataTest {
+    @BeforeTest
+    fun setUp() {
+        initServiceTestDatabase()
+        System.setProperty("seed.admin.id", "admin-001")
+        System.setProperty("seed.admin.name", "Admin")
+        System.setProperty("seed.admin.email", "admin-seed@example.com")
+        System.setProperty("seed.admin.password", "seed-password")
+    }
+
+    @Test
+    fun `repeat seeding inserts nothing new`() {
+        SeedData.seedOfficialCourses()
+
+        val countsAfterFirstSeed = transaction {
+            Triple(
+                Users.selectAll().count(),
+                Courses.selectAll().count(),
+                Pair(Lessons.selectAll().count(), Exercises.selectAll().count())
+            )
+        }
+
+        SeedData.seedOfficialCourses()
+
+        transaction {
+            assertEquals(countsAfterFirstSeed.first, Users.selectAll().count())
+            assertEquals(countsAfterFirstSeed.second, Courses.selectAll().count())
+            assertEquals(countsAfterFirstSeed.third.first, Lessons.selectAll().count())
+            assertEquals(countsAfterFirstSeed.third.second, Exercises.selectAll().count())
+        }
+    }
+
+    @Test
+    fun `new seed entity is inserted after prior seeding and pre-existing admin row is unchanged`() {
+        val preExistingAdminId = "pre-existing-admin"
+        insertUser(id = preExistingAdminId, role = UserRole.ADMIN, email = "admin-seed@example.com")
+
+        SeedData.seedOfficialCourses()
+
+        transaction {
+            assertEquals(
+                1L,
+                Users.selectAll().where { Users.email eq "admin-seed@example.com" }.count()
+            )
+            assertEquals(
+                preExistingAdminId,
+                Users.selectAll().where { Users.email eq "admin-seed@example.com" }.single()[Users.id]
+            )
+            assertEquals(1L, Courses.selectAll().where { Courses.id eq "course-demo-qa" }.count())
+            assertEquals(1L, Lessons.selectAll().where { Lessons.id eq "lesson-demo-theory" }.count())
+            assertEquals(1L, Lessons.selectAll().where { Lessons.id eq "lesson-demo-exercises" }.count())
+            assertEquals(1L, Exercises.selectAll().where { Exercises.id eq "ex-demo-mc-1" }.count())
+            assertEquals(1L, Exercises.selectAll().where { Exercises.id eq "ex-demo-input-1" }.count())
+            assertEquals(1L, Exercises.selectAll().where { Exercises.id eq "ex-demo-multi-1" }.count())
+        }
+    }
+
+    @Test
+    fun `demo course content materializes every payload type and arithmetic seed stays intact`() {
+        SeedData.seedOfficialCourses()
+
+        transaction {
+            val demoCourse = Courses.selectAll().where { Courses.id eq "course-demo-qa" }.single()
+            assertTrue(demoCourse[Courses.isOfficial])
+
+            val theoryLesson = Lessons.selectAll().where { Lessons.id eq "lesson-demo-theory" }.single()
+            val exercisesLesson = Lessons.selectAll().where { Lessons.id eq "lesson-demo-exercises" }.single()
+            assertTrue(theoryLesson[Lessons.theoryContent].isNotBlank())
+            assertTrue(exercisesLesson[Lessons.theoryContent].isNotBlank())
+
+            val mcExercise = Exercises.selectAll().where { Exercises.id eq "ex-demo-mc-1" }.single()
+            val inputExercise = Exercises.selectAll().where { Exercises.id eq "ex-demo-input-1" }.single()
+            val multiExercise = Exercises.selectAll().where { Exercises.id eq "ex-demo-multi-1" }.single()
+
+            assertIs<MultipleChoicePayload>(
+                ExercisePayloadSupport.materializePayload(
+                    persistedType = mcExercise[Exercises.type],
+                    persistedPayload = mcExercise[Exercises.payload],
+                    legacyOptions = mcExercise[Exercises.options],
+                    legacyCorrectAnswer = mcExercise[Exercises.correctAnswer]
+                ).payload
+            )
+            assertIs<InputValuePayload>(
+                ExercisePayloadSupport.materializePayload(
+                    persistedType = inputExercise[Exercises.type],
+                    persistedPayload = inputExercise[Exercises.payload],
+                    legacyOptions = inputExercise[Exercises.options],
+                    legacyCorrectAnswer = inputExercise[Exercises.correctAnswer]
+                ).payload
+            )
+            assertIs<MultiSelectPayload>(
+                ExercisePayloadSupport.materializePayload(
+                    persistedType = multiExercise[Exercises.type],
+                    persistedPayload = multiExercise[Exercises.payload],
+                    legacyOptions = multiExercise[Exercises.options],
+                    legacyCorrectAnswer = multiExercise[Exercises.correctAnswer]
+                ).payload
+            )
+
+            assertEquals(1L, Courses.selectAll().where { Courses.id eq "course-basic-arithmetic" }.count())
+            val arithmeticExercise = Exercises.selectAll().where { Exercises.id eq "ex-add-3" }.single()
+            assertEquals("True,False", arithmeticExercise[Exercises.options])
+            assertEquals("True", arithmeticExercise[Exercises.correctAnswer])
+            assertEquals("TRUE_FALSE", arithmeticExercise[Exercises.type])
+        }
     }
 }
 
