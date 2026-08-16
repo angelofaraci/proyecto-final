@@ -1,5 +1,6 @@
 package com.example.proyectofinal.ui
 
+import androidx.lifecycle.SavedStateHandle
 import com.example.proyectofinal.domain.AuthRepository
 import com.example.proyectofinal.domain.AuthSession
 import com.example.proyectofinal.domain.LearnerProfile
@@ -243,6 +244,47 @@ class OnboardingViewModelTest {
 
         assertNull(viewModel.uiState.value.selectedSchoolYear)
         assertTrue(viewModel.uiState.value.availableSchoolYears.all { StudentTrack.PRIMARY in it.allowedTracks })
+    }
+
+    @Test
+    fun `partial selections survive saved-state recreation`() = runTest(dispatcher) {
+        val handle = SavedStateHandle()
+        val repository = FakeLearnerProfileRepository()
+        val first = OnboardingViewModel(OnboardingFakeAuthRepository(testUser), repository, handle)
+        first.selectProvince("Buenos Aires")
+        first.nextStep()
+        first.selectTrack(StudentTrack.SECONDARY)
+        first.nextStep()
+        first.selectSchoolYear(7)
+        advanceUntilIdle()
+
+        val recreated = OnboardingViewModel(OnboardingFakeAuthRepository(testUser), repository, handle)
+
+        with(recreated.uiState.value) {
+            assertEquals(OnboardingStep.SCHOOL_YEAR, currentStep)
+            assertEquals("Buenos Aires", selectedProvince)
+            assertEquals(StudentTrack.SECONDARY, selectedTrack)
+            assertEquals(7, selectedSchoolYear)
+        }
+    }
+
+    @Test
+    fun `unknown saved enum values fall back without crashing`() = runTest(dispatcher) {
+        val handle = SavedStateHandle(
+            mapOf(
+                "onboarding.step" to "REMOVED_STEP",
+                "onboarding.track" to "REMOVED_TRACK"
+            )
+        )
+
+        val recreated = OnboardingViewModel(
+            OnboardingFakeAuthRepository(testUser),
+            FakeLearnerProfileRepository(),
+            handle
+        )
+
+        assertEquals(OnboardingStep.PROVINCE, recreated.uiState.value.currentStep)
+        assertNull(recreated.uiState.value.selectedTrack)
     }
 
     @Test

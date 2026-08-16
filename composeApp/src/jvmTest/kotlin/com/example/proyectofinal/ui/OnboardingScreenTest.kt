@@ -8,6 +8,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.mutableStateOf
 import com.example.proyectofinal.data.SchoolYearOption
 import com.example.proyectofinal.domain.StudentTrack
 import com.example.proyectofinal.ui.theme.AppTheme
@@ -79,5 +80,29 @@ class OnboardingScreenTest {
         composeTestRule.onNodeWithText("Continue to courses").assertIsDisplayed().performClick()
 
         assertEquals(1, completeCalls)
+    }
+
+    @Test
+    fun `selected onboarding values remain rendered after recomposition`() {
+        val frame = mutableStateOf(0)
+        val state = OnboardingUiState(
+            currentStep = OnboardingStep.SCHOOL_YEAR,
+            selectedProvince = "Buenos Aires",
+            selectedTrack = StudentTrack.SECONDARY,
+            selectedSchoolYear = 7,
+            availableSchoolYears = listOf(SchoolYearOption("7th year", 7, setOf(StudentTrack.SECONDARY)))
+        )
+        composeTestRule.setContent {
+            frame.value
+            AppTheme {
+                OnboardingContent(state, {}, {}, {}, {}, {}, {})
+            }
+        }
+
+        composeTestRule.onNodeWithText("Province: Buenos Aires", substring = true).assertIsDisplayed()
+        composeTestRule.onNodeWithText("School year: 7th year", substring = true).assertIsDisplayed()
+        composeTestRule.runOnIdle { frame.value++ }
+        composeTestRule.onNodeWithText("Province: Buenos Aires", substring = true).assertIsDisplayed()
+        composeTestRule.onNodeWithText("School year: 7th year", substring = true).assertIsDisplayed()
     }
 }

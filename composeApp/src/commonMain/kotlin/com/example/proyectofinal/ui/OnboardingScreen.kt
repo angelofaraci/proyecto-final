@@ -1,6 +1,7 @@
 package com.example.proyectofinal.ui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CardDefaults
@@ -23,16 +25,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.example.proyectofinal.data.SchoolYearOption
 import com.example.proyectofinal.domain.StudentTrack
 import com.example.proyectofinal.ui.primitives.MButton
-import com.example.proyectofinal.ui.primitives.MButtonStyle
 import com.example.proyectofinal.ui.primitives.MCard
 import com.example.proyectofinal.ui.theme.AppThemeDefaults
 import org.jetbrains.compose.resources.stringResource
 import proyectofinal.composeapp.generated.resources.Res
-import proyectofinal.composeapp.generated.resources.onboarding_action_back
 import proyectofinal.composeapp.generated.resources.onboarding_action_continue
 import proyectofinal.composeapp.generated.resources.onboarding_action_continue_to_courses
 import proyectofinal.composeapp.generated.resources.onboarding_action_saving
@@ -87,6 +88,7 @@ internal fun OnboardingContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -146,13 +148,18 @@ internal fun OnboardingContent(
         }
 
         if (state.currentStep != OnboardingStep.PROVINCE) {
-            MButton(
+            Surface(
                 onClick = onBack,
                 enabled = !state.isSaving,
-                modifier = Modifier.fillMaxWidth(),
-                style = MButtonStyle.Outline
+                modifier = Modifier
+                    .size(38.dp)
+                    .testTag("onboardingBackButton"),
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant
             ) {
-                Text(stringResource(Res.string.onboarding_action_back))
+                Box(contentAlignment = Alignment.Center) {
+                    Text(text = "←", style = MaterialTheme.typography.titleLarge)
+                }
             }
         }
     }
@@ -380,7 +387,10 @@ private fun SelectionCard(
     }
 
     MCard(
-        modifier = Modifier.fillMaxWidth().clickable(enabled = enabled, onClick = onClick),
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("selectionCard-$title")
+            .clickable(enabled = enabled, onClick = onClick),
         border = BorderStroke(1.dp, borderColor),
         colors = CardDefaults.cardColors(containerColor = containerColor)
     ) {

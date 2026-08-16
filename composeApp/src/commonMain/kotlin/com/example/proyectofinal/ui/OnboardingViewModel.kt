@@ -1,6 +1,7 @@
 package com.example.proyectofinal.ui
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.example.proyectofinal.data.ProvinceSchoolCatalog
 import com.example.proyectofinal.data.SchoolYearOption
@@ -12,6 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.collect
 
 enum class OnboardingStep {
     PROVINCE,
@@ -42,11 +44,23 @@ data class OnboardingUiState(
 
 class OnboardingViewModel(
     private val authRepository: AuthRepository,
-    private val learnerProfileRepository: LearnerProfileRepository
+    private val learnerProfileRepository: LearnerProfileRepository,
+    private val savedStateHandle: SavedStateHandle = SavedStateHandle()
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(OnboardingUiState())
+    private val _uiState = MutableStateFlow(restoredState(savedStateHandle))
     val uiState: StateFlow<OnboardingUiState> = _uiState.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            _uiState.collect { state ->
+                savedStateHandle[STEP_KEY] = state.currentStep.name
+                savedStateHandle[PROVINCE_KEY] = state.selectedProvince
+                savedStateHandle[TRACK_KEY] = state.selectedTrack?.name
+                savedStateHandle[YEAR_KEY] = state.selectedSchoolYear
+            }
+        }
+    }
 
     fun selectProvince(province: String) {
         val schoolYears = ProvinceSchoolCatalog.schoolYearOptionsFor(province)
@@ -234,4 +248,32 @@ class OnboardingViewModel(
         StudentTrack.entries.map { track ->
             OnboardingTrackOption(track = track, enabled = track in allowedTracks)
         }
+
+    private companion object {
+        const val STEP_KEY = "onboarding.step"
+        const val PROVINCE_KEY = "onboarding.province"
+        const val TRACK_KEY = "onboarding.track"
+        const val YEAR_KEY = "onboarding.year"
+
+        fun restoredState(handle: SavedStateHandle): OnboardingUiState {
+            val province = handle.get<String>(PROVINCE_KEY)
+            val track = handle.get<String>(TRACK_KEY)?.let { saved ->
+                StudentTrack.entries.firstOrNull { it.name == saved }
+            }
+            val years = if (province != null && track != null) {
+                ProvinceSchoolCatalog.schoolYearOptionsFor(province, track)
+            } else emptyList()
+            val year = handle.get<Int>(YEAR_KEY)?.takeIf { selected -> years.any { it.schoolYear == selected } }
+            return OnboardingUiState(
+                currentStep = handle.get<String>(STEP_KEY)?.let { saved ->
+                    OnboardingStep.entries.firstOrNull { it.name == saved }
+                } ?: OnboardingStep.PROVINCE,
+                trackOptions = StudentTrack.entries.map { OnboardingTrackOption(it, province != null) },
+                selectedProvince = province,
+                selectedTrack = track,
+                availableSchoolYears = years,
+                selectedSchoolYear = year
+            )
+        }
+    }
 }
