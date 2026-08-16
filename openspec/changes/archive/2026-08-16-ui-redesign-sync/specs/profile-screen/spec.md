@@ -1,5 +1,7 @@
 # Delta for profile-screen
 
+> Authority: this Profile v2 navigation-hub delta is the conformance target. The structurally different `perfil-usuario.png` concept is superseded for this change and requires a separate specification if revived.
+
 ## MODIFIED Requirements
 
 ### Requirement: Profile Screen Layout

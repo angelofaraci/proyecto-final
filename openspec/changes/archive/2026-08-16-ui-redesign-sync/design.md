@@ -2,7 +2,7 @@
 
 ## Technical Approach
 
-**Foundation-first, visual-only**. Slice 1 updates theme tokens (Sora font, semantic colors, shape radii, shadow primitives). Slices 2–6 apply tokens to each feature area. Zero behavioral, navigation, or contract changes. Dark mode excluded.
+**Foundation-first visual sync with bounded reliability remediation**. Slices 1–6 apply tokens per feature; later remediation may wire already-specified navigation or retain screen-local state. Backend/shared contracts and dark mode remain excluded.
 
 ## Architecture Decisions
 
@@ -114,7 +114,7 @@
 ### Visual/Manual (per slice)
 
 - **Auth**: Pixel comparison against Jul 16 `.dc.html` handoff — font rendering, shadow blur, divider alignment.
-- **Profile**: PNG (Jul 21 `perfil-usuario.png`) vs rendered hub — streak chip, icon box colors, card radii. Note potential PNG-to-handoff drift.
+- **Profile**: Profile v2 navigation-hub delta vs rendered hub — icon box colors, card radii, navigation, and logout. The structurally different Jul 21 `perfil-usuario.png` is deferred to a future change.
 - **Home**: `inicio-dashboard.png` pixel comparison — structural layout verification.
 - **Lesson Map**: `mapa-leccion.png` — path curvature, node spacing, theory pill placement.
 - **Exercise**: `ejercicio-gameplay.png` — heart positions, grid gap, hint link placement.
@@ -142,6 +142,6 @@ N/A — no routing, shell, subprocess, VCS/PR automation, executable-file classi
 
 ## Open Questions
 
-- [ ] **Profile PNG vs handoff drift** (`perfil-usuario.png` Jul 21 vs `Perfil v2.dc.html` Jul 16): Which is authoritative? Design review needed.
+- [x] **Profile PNG vs handoff drift resolved**: the approved Profile v2 navigation-hub delta is authoritative; `perfil-usuario.png` is not a conformance target for this change.
 - [ ] **Home Dashboard PNG** exact structural layering: precise widget positions from `inicio-dashboard.png` must be confirmed during implementation.
 - [ ] **Sora OFL attribution**: Is `composeResources/files/OFL.txt` sufficient, or does the license require in-app attribution?

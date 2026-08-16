@@ -1,31 +1,31 @@
 # Apply Progress: UI Redesign Sync
 
+## Change Readiness
+
+**NOT READY.** `verify-report.md` remains `FAIL`; final independent verification task 7.4d is open. Completed
+implementation slices do not make this change archive-ready.
+
 ## Slice Status
 
 | Slice | Status | Notes |
 |-------|--------|-------|
-| 1 — Foundation/tokens (PR 1) | IMPLEMENTED + TESTED | Manual visual check pending |
-| 2 — Auth | IMPLEMENTED + TESTED | Automated tests green (24 suites / 110 tests); manual Jul 16 screenshot check pending |
-| 3 — Profile | IMPLEMENTED + TESTED | Automated tests green (25 suites / 115 tests); manual Jul 21 PNG check **blocked by structural PNG↔spec conflict** (see Slice 3 Issues) |
-| 4 — Home | IMPLEMENTED + TESTED | Automated tests green (27 suites / 123 tests); manual `inicio-dashboard.png` pixel check pending |
-| 5 — Lesson map only | IMPLEMENTED + TESTED; VISUAL CHECK PENDING | Automated tests green (27 suites / 128 tests); maintainer approved `size:exception` for ONE PR (~705 actual vs ~775 approved); manual `mapa-leccion.png` pixel check not performed |
-| 6 — Exercise player + TheorySheet + onboarding + states | NOT STARTED | No Slice 6 implementation or verification has been performed |
+| 1 — Foundation/tokens (PR 1) | COMPLETE | Tasks 1.1–1.9 accepted. |
+| 2 — Auth | COMPLETE | Tasks 2.1–2.4 accepted. |
+| 3 — Profile | COMPLETE | Tasks 3.1–3.5 complete; 3.5 is the documented Profile v2 waiver. |
+| 4 — Home | COMPLETE | Tasks 4.1–4.5 accepted. |
+| 5 — Lesson map only | COMPLETE | Tasks 5.1–5.6 accepted. |
+| 6 — Exercise player + TheorySheet + onboarding + states | COMPLETE | Tasks 6.1–6.7 accepted. Latest full JVM evidence: 31 suites / 158 tests, 0 failures/errors/skips. |
+| 7 — Verification remediation | IN PROGRESS | Tasks 7.4a–7.4c complete; final independent verification remains pending. |
 
 ## Recovery Boundaries
 
-The recovered worktree contains unrelated changes that are **not part of Slices 1–6**. Preserve them as-is and exclude them from redesign branches, commits, staging, and rollback boundaries:
+Historical recovery notes may name unrelated paths that were observed in earlier snapshots. They are retained only as historical evidence and are **not current-worktree claims**. Current Git verification reports no change for `package.json`, `package-lock.json`, or `scripts/configure-android-wsl-portproxy.ps1`; do not treat those paths as part of the redesign scope, recovery boundary, staging set, or rollback boundary.
 
-- `package.json`
-- `package-lock.json`
-- `scripts/configure-android-wsl-portproxy.ps1` (existing deletion)
-- `openspec/backlog.md`
-- Reference PNG imports outside the redesign slice scope
-
-Do not delete or restore these paths while recovering the redesign; separate ownership must be resolved independently.
+Do not infer current unrelated changes from historical snapshots; resolve separate ownership only from a fresh Git inspection.
 
 ## Mode
 
-Standard mode (`strict_tdd: false` in `openspec/config.yaml`). Delivery: chained PR slices of 6, strategy `stacked-to-main` (per tasks.md Review Workload Forecast). Slice 2 stacks on Slice 1 (`feature/auth-redesign` ← `foundation/ui-redesign-tokens`).
+This change uses **Standard mode** (`strict_tdd: false` in `openspec/config.yaml`); whole-change RED/GREEN provenance is neither required nor claimed. Later corrective units retain any factual local TDD history, but the failed report's `Mode: Strict TDD` label is stale and must be superseded by task 7.4d rather than retroactively rewritten. Delivery: chained PR slices of 6, strategy `stacked-to-main` (per tasks.md Review Workload Forecast).
 
 ## Files Changed (Slice 1)
 
@@ -119,9 +119,9 @@ Theme files (`ui/theme/*`): untouched — consumed Slice 1 tokens only (`iconBox
 - **PNG↔spec structural drift (see Deviation 1)** — the Jul 21 `perfil-usuario.png` cannot be reconciled with the spec deltas within a visual-only slice. This blocks task 3.4's manual pixel comparison: there is no implemented screen comparable to the PNG. Escalate to design review before archive.
 - iOS/Android compilation not verified locally (Linux env runs `jvmTest` only). androidMain actual reuses the verified `BuildConfig` import pattern from `ApiBaseUrl.android.kt`; iosMain actual is a trivial constant. Recommend CI or a local `:composeApp:assembleDebug` + iOS compile before PR 3 review closes.
 
-## Risks / Pending (Slice 3)
+## Risks / Pending (Slice 3 — Historical / Resolved or Superseded)
 
-- **Manual visual verification pending** (task 3.4 second half): pixel comparison vs `perfil-usuario.png` — **blocked by the structural conflict** (Deviation 1); compare against `Perfil v2.dc.html` instead once the design authority question is resolved.
+- **Historical manual visual verification** (task 3.4 second half): pixel comparison vs `perfil-usuario.png` was blocked by the structural conflict (Deviation 1); the canonical final state records task 3.5 as waived under Profile v2.
 - **400-line budget exceeded** (~797 actual vs ~250 forecast) — maintainer must pick `size:exception` or the 3a/3b split (see Slice 3 PR Boundary) before PR creation.
 - Switch unchecked track now uses `BrandTrack` and checked track teal for ALL `ProfileToggleRow`s — consistent with the handoff toggle spec; confirm no other screen consumes `ProfileToggleRow` expecting coral (only Preferencias uses it today).
 - `streak > 0` visibility guard (Deviation 3) and 11sp caption (Deviation 10) are judgment calls flagged for design review.
@@ -150,7 +150,7 @@ Theme files (`ui/theme/*`): untouched — consumed Slice 1 tokens only (`BrandTr
   - `progress card renders level XP text and a 68 percent bar` ("Nivel 5", "340 / 500 XP", `ProgressBarRangeInfo(340f/500f, 0f..1f, 0)` — spec mock literals passed straight to the content composable)
   - `zero progress renders nivel 0 and an empty bar` ("Nivel 0", "0 / 100 XP", bar 0f)
   - `courses section renders header course cards and ir pill opens the lesson map` ("MIS CURSOS EN PROGRESO", "Progreso: 45%", 2× "Ir" → `onOpenLessonMap` fired; "Abrir mapa de lecciones" → fired)
-  - `enrolled dashboard without in-progress courses keeps the continue learning card` ("Ir al mapa" → `onContinueLearning`; catalog CTA preserved)
+  - `enrolled dashboard without in-progress courses keeps the continue learning card` ("Ir al mapa" → `onContinueLearning`; secondary lesson-map CTA preserved)
 - `HomeDashboardViewModelTest` 9/9 green — streak rename keeps identical math/values; no behavior assertion weakened.
 - One RED→GREEN cycle this batch: first run failed compiling `HomeDashboardRedesignRenderTest` — `Unresolved reference 'onNode'`. In this Compose version `onNode`/`onAllNodes` are **members** of `SemanticsNodeInteractionsProvider` (no import exists); fixed test-side by dropping the bogus import (production code unchanged).
 - **Runtime harness**: compose render tests exercise the real `HomeDashboardContent` + `AppTheme` (Sora) + Slice 3 vector assets on JVM; "Ir" pill, catalog CTA, and ContinueLearningCard callbacks all executed.
@@ -179,9 +179,9 @@ Theme files (`ui/theme/*`): untouched — consumed Slice 1 tokens only (`BrandTr
 - iOS/Android compilation not verified locally (Linux env runs `jvmTest` only). New code is `commonMain`-only Compose + an `expect`-free VM; the only resource consumed (`ic_flame`) already shipped in Slice 3. Recommend CI or a local `:composeApp:assembleDebug` + iOS compile before PR 4 review closes.
 - `HomeDashboardContent` branches on `inProgressCourses.isNotEmpty()`; an enrolled user whose courses all have 0% progress still sees the courses section (0% cards) rather than `ContinueLearningCard` — matches the resolved plan ("percent computed, no filter") and the PNG's 12% card, but flag for design review if 0% should fall back to the empty state.
 
-## Risks / Pending (Slice 4)
+## Risks / Pending (Slice 4 — Historical / Resolved or Superseded)
 
-- **Manual visual verification pending** (task 4.4 second half): pixel comparison vs `inicio-dashboard.png` — pill/bar colors, circle tint, glyph, tracking. Required before PR 4 review closes.
+- **Historical manual visual verification** (task 4.4 second half): pixel comparison vs `inicio-dashboard.png` covered pill/bar colors, circle tint, glyph, and tracking; task 4.5 is accepted in the canonical final state.
 - **`size:exception` accepted**: 497 changed lines in ONE PR (see Slice 4 PR Boundary). No further budget action needed; recorded for the archive ledger.
 - `schoolYearLabel` is now dead UI state on home (Deviation 2) — a future contract cleanup could drop it from `HomeDashboardUiState`, but that is a behavior-adjacent change outside this visual slice.
 
@@ -242,19 +242,19 @@ Theme files (`ui/theme/*`): untouched — consumed Slice 1 tokens only (`seconda
 - `BoxWithConstraints` subcomposition + Canvas redraw per scroll frame is fine for realistic lesson sizes (< 20 exercises); a path with hundreds of nodes would want virtualization — not a real scenario today.
 - Spec scenarios deliberately NOT implemented per maintainer rulings (all flagged for archive-time spec amendments): "tapping completed node opens exercise" (ruling 3), "navigates to course catalog" (ruling 4), "Unidad 2 ·" subtitle (ruling 2), "45%" mock percent (ruling 1).
 
-## Risks / Pending (Slice 5)
+## Risks / Pending (Slice 5 — Historical / Resolved or Superseded)
 
-- **Manual visual verification pending** (task 5.4 second half): pixel comparison vs `mapa-leccion.png` — serpentine x positions + first-node side (Deviation 6), dash density, node colors, pill shape. Required before PR 5 review closes.
+- **Historical manual visual verification** (task 5.4 second half): pixel comparison vs `mapa-leccion.png` covered serpentine positions, dash density, node colors, and pill shape; task 5.6 is accepted in the canonical final state.
 - **`size:exception` accepted**: ~705 changed lines in ONE PR (approved envelope ~775). No further budget action needed; recorded for the archive ledger.
 - Parity call (Deviation 6) is the one geometry judgment not covered by an explicit ruling — if the maintainer prefers design.md's literal 0-based reading, flipping is a one-line change (`node.index % 2` → position parity); the Canvas and node placement share the same helper, so they cannot drift apart.
 
-## Test Evidence
+## Test Evidence (Historical Slice 1)
 
 - **Focused test command**: `./gradlew :composeApp:jvmTest --console=plain`
 - **Result**: `BUILD SUCCESSFUL in 2m 57s` — **23 suites, 107 tests, 0 failures, 0 errors, 0 skipped** (was 106; +1 new `semanticFoundationColorsMatchRedesign`).
 - `AppThemeTokensTest`: 4/4 green — `lightColorSchemeMatchesBrandedFoundationPalette`, `semanticFoundationColorsMatchRedesign`, `shapeTokensExposeReviewableFoundationValues`, `typographyMatchesSoraScaleWithInjectedFamily`.
 - Existing compose-rule render tests (`OnboardingScreenTest`, `ProfileScreenTest`, etc.) exercise `AppTheme` → Sora `Font()` resource loading path on JVM — all green, proving the font wiring resolves at runtime.
-- **Runtime harness**: `N/A` for Slice 1 in-app navigation — visual-only tokens; runtime boundary exercised indirectly via the 107-test jvmTest suite (compose render tests). Manual device check pending (see Risks).
+- **Runtime harness**: `N/A` for Slice 1 in-app navigation — visual-only tokens; runtime boundary exercised indirectly via the 107-test jvmTest suite (compose render tests). Historical manual device check was pending (see historical Risks).
 - **SDK workaround**: `sdk.dir` patched to `/mnt/c/Users/Nahuel/AppData/Local/Android/Sdk` before the run, restored after (verified 0 occurrences remain).
 
 ## Test Evidence (Slice 2)
@@ -267,7 +267,7 @@ Theme files (`ui/theme/*`): untouched — consumed Slice 1 tokens only (`seconda
   - `terms checkbox is 22 by 22 dp and toggles acceptance from the row` (`assertWidthIsEqualTo(22.dp)`/`assertHeightIsEqualTo(22.dp)` on the tagged box; `Role.Checkbox` node `assertIsOff` → `performClick` → `assertIsOn` + `acceptedTerms == true`)
 - One RED→GREEN cycle during the batch: first run failed on `onNodeWithTag("termsCheckboxBox")` — the `toggleable` row merges descendants, so the tag only exists in the unmerged tree. Fixed with `useUnmergedTree = true` (test-side fix; production code unchanged). Verbatim failure: `Expected exactly '1' node but could not find any node that satisfies: (TestTag = 'termsCheckboxBox'). However, the unmerged tree contains '1' node that matches.`
 - Existing suites untouched and still green: `LoginViewModelTest`, `RegisterViewModelTest`, `AuthGateViewModelTest`, `AppThemeTokensTest`, `OnboardingScreenTest`, `ProfileScreenTest` — no behavior assertion was weakened or edited.
-- **Runtime harness**: compose render tests exercise the real `LoginScreen`/`RegisterScreen` + ViewModel + `AppTheme` (Sora loading) path on JVM. Manual pixel comparison vs Jul 16 `.dc.html` pending (see Risks).
+- **Runtime harness**: compose render tests exercise the real `LoginScreen`/`RegisterScreen` + ViewModel + `AppTheme` (Sora loading) path on JVM. Historical manual pixel comparison vs Jul 16 `.dc.html` was pending (see historical Risks).
 - Not semantics-observable, deferred to manual check: coral shadow blur on CTA, teal segment color, Sora/mono glyph rendering, 14dp social radius pixels.
 - **Rollback boundary**: revert touches only `ui/LoginScreen.kt`, `ui/RegisterScreen.kt`, `ui/AuthScreenScaffold.kt`, `ui/primitives/MButton.kt` (Social branch), `src/jvmTest/.../AuthRedesignRenderTest.kt` — no theme token, navigation, ViewModel, or contract changes.
 
@@ -294,7 +294,7 @@ Theme files (`ui/theme/*`): untouched — consumed Slice 1 tokens only (`seconda
 4. **`MCard.kt` edited 0 lines** (design predicted +1) — 18dp arrives transitively via `shapes.large`; behavior identical, no magic numbers introduced.
 5. **Font fallback**: design pseudo-code `FontFamily(listOf(..., FontFamily.SansSerif))` is not valid API (a `FontFamily` is not a `Font`). Bundled resources cannot go missing at runtime, so the "Nunito fallback" scenario is satisfied by packaging; unmapped weights (e.g. Medium 500, no 500 ttf bundled) resolve to the nearest bundled Sora weight via Compose font resolution — no crash path.
 6. **Naming**: `BrandTrack`/`BrandLock`/`BrandStripe`/`BrandCoralShadow` follow the file's existing `Brand*` convention (design text said `Track`/`Lock`/`Stripe`).
-7. **Pre-existing unrelated working-tree changes NOT touched**: `docs/ui/screens/*.png`, `openspec/backlog.md`, deleted `scripts/configure-android-wsl-portproxy.ps1` — left exactly as found.
+7. **Historical Slice 1 observation (superseded; not a current-worktree claim)**: an earlier snapshot recorded unrelated `docs/ui/screens/*.png`, `openspec/backlog.md`, and a deleted `scripts/configure-android-wsl-portproxy.ps1`; this does not assert that any of those paths are currently changed.
 
 ## Deviations from Design (Slice 2)
 
@@ -314,7 +314,7 @@ Theme files (`ui/theme/*`): untouched — consumed Slice 1 tokens only (`seconda
 - Slice 2: design.md/tasks.md carry **stale pre-Jul-16 values** (title 32/800, logo 18dp) that conflict with the Jul 16 handoff and the spec delta — resolved in favor of handoff+spec (see Slice 2 Deviations 1–2). Recommend amending design.md at archive time.
 - Slice 2: register "Back" outline button uses English copy ("Back") on a Spanish screen — pre-existing, out of scope, noted for a future copy pass.
 
-## Risks / Pending
+## Risks / Pending (Historical / Resolved or Superseded)
 
 - **Manual visual verification pending** (task 1.8 second half): Sora rendering + CTA coral shadow on device/emulator — cannot be done headless. Required before PR 1 review closes.
 - **Manual visual verification pending** (task 2.3 second half): pixel comparison vs Jul 16 `.dc.html` — shadow blur, teal strength fill, mono step label, 22×22 checkbox, two-tone wordmark. Required before PR 2 review closes.
@@ -325,7 +325,7 @@ Theme files (`ui/theme/*`): untouched — consumed Slice 1 tokens only (`seconda
 
 ## Superseded Snapshot: Slice 5 Budget Gate Before Implementation
 
-**Current resolution**: maintainer approved `size:exception` for ONE PR 5 (~775-line envelope; actual ~705), and Slice 5 implementation plus automated tests are now complete. The pre-approved 5a/5b split (option b) was declined. The 5 spec/design conflicts below were ruled on by the maintainer and are recorded as binding in Slice 5 Deviations 1–5. The remaining Slice 5 requirement is the manual `mapa-leccion.png` visual check.
+**Historical resolution**: maintainer approved `size:exception` for ONE PR 5 (~775-line envelope; actual ~705), and Slice 5 implementation plus automated tests were complete at this checkpoint. The pre-approved 5a/5b split (option b) was declined. The 5 spec/design conflicts below were ruled on by the maintainer and are recorded as binding in Slice 5 Deviations 1–5. The then-remaining Slice 5 requirement was the manual `mapa-leccion.png` visual check; task 5.6 is now accepted.
 
 > **Historical snapshot, superseded by the current status above:** At the budget-gate checkpoint, the apply batch had stopped before writing code because the estimate exceeded 400 lines. At that time no Slice 5 files had been created or modified and tasks 5.1–5.4 were unchecked. This statement is retained only as decision and budget evidence; it does not describe the recovered worktree's current state.
 
@@ -365,13 +365,267 @@ Theme files (`ui/theme/*`): untouched — consumed Slice 1 tokens only (`seconda
 ## Remaining Tasks
 
 - [x] Slice 1 implementation and automated tests (PR 1): foundation/tokens
-- [ ] Slice 1 manual visual check: Sora rendering and CTA shadow
+- [x] Slice 1 manual visual check: accepted
 - [x] Slice 2 implementation and automated tests (PR 2): auth screens
-- [ ] Slice 2 manual visual check: Jul 16 screenshot
+- [x] Slice 2 manual visual check: accepted
 - [x] Slice 3 implementation and automated tests (PR 3): profile
-- [ ] Slice 3 manual visual check: blocked by the documented PNG/spec conflict
+- [x] Slice 3 manual visual check: waived; Profile v2 authoritative
 - [x] Slice 4 implementation and automated tests (PR 4): home
-- [ ] Slice 4 manual visual check: `inicio-dashboard.png`
+- [x] Slice 4 manual visual check: accepted
 - [x] Slice 5 implementation and automated tests (PR 5): lesson map only
-- [ ] Slice 5 manual visual check: `mapa-leccion.png`
-- [ ] Slice 6 implementation and verification (PR 6): exercise player + `TheorySheet` + onboarding + empty/loading states — not started
+- [x] Slice 5 manual visual check: accepted
+- [x] Slice 6.1–6.3 automated exercise-player corrective work: header/lives/progress, question card/grid/glow, hint/CTA
+- [x] Slice 6.4: `TheorySheet.kt` sections; `OnboardingScreen.kt` SelectionCard/buttons
+- [x] Slice 6.5: `PlaceholderScreen.kt` empty/loading states
+- [x] Slice 6.6: broad automated exercise/player/state tests
+- [x] Slice 6.7: manual visual checks accepted
+
+## Slice 6a Corrective Apply — Exercise Header and Hint Contract
+
+### Completed Tasks
+
+- [x] **6.1** Header now renders the lesson title, `current/total` question counter, state-derived progress, and the remaining lives; incorrect attempts decrement lives without going below zero.
+- [x] **6.2** Question-card/grid/glow work was already complete in the candidate and remains unchanged by this corrective unit.
+- [x] **6.3** `Pista` is a clickable link that invokes the injected hint callback (the production callback surfaces informational feedback); the drafting CTA renders `Confirmar` while existing submitting/retry labels and submission behavior remain intact.
+
+### TDD Cycle Evidence
+
+| Task | Test file / layer | Safety net | RED | GREEN | TRIANGULATE | REFACTOR |
+|---|---|---|---|---|---|---|
+| 6.1 | `ExercisePlayerRedesignRenderTest` (Compose render), `LessonMapViewModelTest` (unit) | `*ExercisePlayerRedesignRenderTest` green before the corrective cycle | **Contemporaneous corrective RED**: focused compilation failed because `remainingLives` and `onHintRequested` did not exist (this is distinct from reconstructed historical Slice 6 styling work) | Focused 11 tests green after state/ViewModel/header implementation | 1/4 with 2 hearts and 3/4 with 1 heart; wrong-answer ViewModel assertion verifies 3→2 | Extracted local question number/count values; focused tests stayed green |
+| 6.3 | `ExercisePlayerRedesignRenderTest` (Compose render) | Same focused safety net | **Contemporaneous corrective RED**: missing `onHintRequested` parameter prevented compilation | Focused 11 tests green after clickable `exerciseHint`, production callback, and `Confirmar` resource update | Hint callback fires without submitting; confirm then submits exactly once | Removed obsolete header resource imports; focused tests stayed green |
+
+### Work Unit Evidence
+
+| Evidence | Result |
+|---|---|
+| Focused exact result | `bash ./gradlew :composeApp:jvmTest --console=plain --tests '*ExercisePlayerRedesignRenderTest' --tests '*LessonMapViewModelTest'` → **BUILD SUCCESSFUL**, 11 tests, 0 failures/errors (post-refactor) |
+| Runtime harness result | Same JVM Compose render harness exercised the real `LessonMapContent` header, progress semantics, hearts, clickable hint callback, CTA, plus the real `LessonMapViewModel` wrong-answer transition → **BUILD SUCCESSFUL** |
+| Historical full required result | `bash ./gradlew :composeApp:jvmTest --console=plain` → **BUILD SUCCESSFUL**, 29 suites / 147 tests, 0 failures/errors/skips |
+| Historical rollback boundary | Revert only the Slice 6a hunks in `LessonMapScreen.kt`, `LessonMapUiState.kt`, `LessonMapViewModel.kt`, exercise resources, and the two exercise tests; existing Slice 6.2 grid/card changes and then-pending 6.4–6.7 remained isolated |
+
+### Corrective Budget and Scope
+
+- Corrective delta from the received candidate: **approximately 145 changed lines**, within the 200-line correction cap; the larger pre-existing uncommitted Slice 6 candidate is excluded from this bound.
+- Historical Slice 6a state: no commit, push, or native review was started; manual visual acceptance was pending.
+
+## Slice 6b Apply — Supporting Surfaces and Render Coverage
+
+### Completed Tasks
+
+- [x] **6.4** `TheorySheet` now separates the lesson title from a bordered surface content section. Onboarding selection cards expose their real click target and retain the existing 18dp theme-card shape and 1dp border; Continue/Complete retain the existing 16dp, coral-shadow `MButton` primitive, while Back is the required reachable 38dp square with a 12dp surface-variant treatment.
+- [x] **6.5** `PlaceholderScreen` now provides a branded empty-state surface and an opt-in loading state through `PlaceholderState.Loading`, using the existing progress primitive without changing current callers' empty-state behavior.
+- [x] **6.6** Added Compose render coverage for theory content structure, interactive onboarding selection cards and compact Back control, and both empty/loading placeholder variants.
+
+### TDD Cycle Evidence
+
+| Task | Test file / layer | Safety net | RED | GREEN | TRIANGULATE | REFACTOR |
+|---|---|---|---|---|---|---|
+| 6.4 | `SupportingSurfacesRedesignRenderTest` (JVM Compose render) | N/A — no pre-existing supporting-surfaces test suite | Focused command failed with 3 behavioral failures: the theory title/content and onboarding selection/back tags were absent | 3/3 focused render tests passed after adding structured theory surface and onboarding semantics/control | Selection tap invokes its callback; a later onboarding step asserts the 38dp Back control | Removed obsolete full-width Back-button imports; focused tests stayed green |
+| 6.5 | `SupportingSurfacesRedesignRenderTest` (JVM Compose render) | N/A — new loading-state API | Focused compilation failed because `PlaceholderState` and its `state` parameter did not exist | Loading illustration/progress test passed after the minimal state API and surface implementation | Empty-state case asserts the supplied copy and no loading indicator; loading case asserts the progress indicator | Kept the API defaulted to `Empty`, preserving every existing caller |
+| 6.6 | `SupportingSurfacesRedesignRenderTest` (JVM Compose render) | Focused 4/4 green before the final empty-state case | Acceptance coverage was written before the corresponding production behavior | 5/5 focused tests passed | 5 behavior cases across theory, onboarding, loading, and empty-state branches | Imports and test assertions cleaned; focused tests remained green |
+
+### Work Unit Evidence
+
+| Evidence | Result |
+|---|---|
+| Initial fixture RED | `bash ./gradlew :composeApp:jvmTest --console=plain --no-daemon --tests '*SupportingSurfacesRedesignRenderTest'` → **BUILD FAILED** (exit 1): the inherited RED fixture used the obsolete `Lesson.teacherId` name. Corrected to the current `creatorId` before evaluating behavior; no production code changed. |
+| Behavioral RED | Same focused command → **BUILD FAILED** (exit 1), 3 tests / 3 failures: absent theory section, selection-card, and compact-back semantics. |
+| Loading-state RED | Same focused command → **BUILD FAILED** (exit 1): `PlaceholderState` and the `state` parameter were unresolved. |
+| Focused GREEN | Same focused command → **BUILD SUCCESSFUL** (exit 0), 5 tests, 0 failures/errors/skips. |
+| Full required result | `bash ./gradlew :composeApp:jvmTest --console=plain --no-daemon` → **BUILD SUCCESSFUL** (exit 0), 30 suites / 152 tests, 0 failures/errors/skips. |
+| Runtime harness | The focused JVM Compose harness rendered the real `TheorySheet`, `OnboardingContent`, and `PlaceholderScreen`; it exercised selection callback dispatch, 38dp Back geometry, title/content separation, loading progress, and empty-state copy → **BUILD SUCCESSFUL**. |
+| Rollback boundary | Revert only `TheorySheet.kt`, `OnboardingScreen.kt`, `PlaceholderScreen.kt`, and `SupportingSurfacesRedesignRenderTest.kt` plus the three PR 6 task/progress entries; recovered Slice 6a exercise work and all unrelated work remain isolated. |
+
+### Scope, Budget, and Pending Work
+
+- Historical Slice 6b status: corrected the stale PR 6 `NOT STARTED` heading to state that implementation was complete and manual visual verification was pending; the canonical final state records the acceptance/waiver outcomes.
+- This batch added **104 authored code/test diff lines** from its received reset baseline (`+92/-12`), for **193/400 cumulative** objective lines including the supplied 89-line prior total; OpenSpec progress/task evidence is excluded from the code budget.
+- No commit, push, staging, native review, archive, or task 6.7 work was performed.
+- Historical Slice 6b state: the then-remaining manual checks were 6.7, 1.9, 2.4, 3.5, 4.5, and 5.6; all are resolved in the canonical final state (3.5 waived under Profile v2).
+
+## Slice 6c Visual Capture Validation
+
+### Scope Confirmation
+
+- Verified the current production corrections without modifying production: structured `TheorySheetContent`, branded Empty/Loading `PlaceholderScreen`, real `LessonMapContent` loading integration, and `homeBottomNavigationVisible` hiding navigation while the exercise player is active.
+- Prior Strict-TDD evidence remains authoritative: missing `homeBottomNavigationVisible` compilation RED, intermediate 8-test/2-failure evidence, then the supplied focused GREEN. This validation did not reopen production scope.
+
+### Capture and Test Evidence
+
+| Evidence | Result |
+|---|---|
+| Deterministic capture test | `bash ./gradlew :composeApp:jvmTest --console=plain --no-daemon --tests '*Slice6VisualAcceptanceCaptureTest'` → **BUILD SUCCESSFUL** (exit 0), 1 test, 0 failures/errors; generated five density-1 RGBA PNGs, each 300×624. |
+| Capture paths | `composeApp/build/visual-acceptance/current/task-6.7-{exercise,theory,onboarding,empty,loading}.png` |
+| Full JVM suite | `bash ./gradlew :composeApp:jvmTest --console=plain --no-daemon` → **BUILD SUCCESSFUL** (exit 0), 31 suites / 156 tests, 0 failures/errors/skips. |
+| Runtime harness | The capture test rendered the real exercise player, theory content, onboarding, and empty/loading states at the requested fixed viewport. |
+| Rollback boundary | Revert only `Slice6VisualAcceptanceCaptureTest.kt` and this Slice 6c progress entry; generated images are build outputs, and no production correction was changed. |
+
+### Budget and Pending Acceptance
+
+- This validation adds 104 changed lines (80-line capture test, 22-line evidence entry, and a 2-line status replacement), for 309/400 cumulative against the supplied 205/400 starting total.
+- Historical Slice 6c state: task 6.7 was intentionally unchecked because the generated captures were evidence for the parent visual judgment, not a substitute for it.
+- No stage, commit, push, review, archive, runtime-ledger edit, or production edit occurred in this validation.
+
+## Slice 6d Manual Visual Acceptance
+
+- **Compared** regenerated opaque 300×624 captures with canonical `docs/ui/screens` references.
+- **Exercise — PASS**: immersive player hierarchy, title/question, hearts/progress, unique options, hint, and CTA match the required structure. Fixture copy and option count differ from the reference, but the component supports type-specific content.
+- **Theory — PASS**: concept, numbered steps, example, and navigation hierarchy match while preserving the sheet architecture.
+- **Loading — PASS**: exercise skeleton structure matches. **Empty — PASS**: scoped branded activity-empty card matches; this is not a full dashboard host capture.
+- **Onboarding — PASS**: approved spec/design tokens and hierarchy match. No valid canonical wizard PNG exists; `splash-bienvenida` is explicitly out of scope.
+- **Historical supporting evidence**: 14 focused GREEN tests; full JVM suite 31 suites / 157 tests; five opaque 300×624 captures.
+- Historical acceptance record: task 6.7 was accepted. Earlier manual tasks were subsequently resolved in the canonical final state.
+
+## Slice 6d Corrective Apply — Visual-Fidelity Defects
+
+### Scope and Outcome
+
+- Historical Slice 6d state: task **6.7 was unchecked**. This corrective batch addressed only defects observed in the deterministic 300×624 captures; the parent subsequently completed the manual comparison.
+- The exercise player now uses a single labelled answer string (`A: …` through `D: …`) per option rather than rendering a selection control, a letter badge, and the same option text independently. Dynamic draft selection, hint, progress, hearts, and submit behavior remain unchanged.
+- The capture root and direct Slice 6 surfaces use the app background, so every pixel in all five emitted PNGs is opaque.
+- Theory now has a chapter label, distinct concept/example cards, numbered steps, and its existing navigation controls. Loading is a screen-shaped activity skeleton; Empty is a branded activity card with artwork, hierarchy, and action.
+
+### TDD Cycle Evidence
+
+| Task | Test file / layer | Safety net | RED | GREEN | TRIANGULATE | REFACTOR |
+|---|---|---|---|---|---|---|
+| Capture opacity | `Slice6VisualAcceptanceCaptureTest` (JVM Compose + emitted PNG) | Existing capture suite green in Slice 6c | Focused run failed: the alpha assertion detected a transparent capture-root pixel | All five captures are 300×624 RGBA with every alpha value 255 | Checks exercise, theory, onboarding, empty, and loading roots | Shared themed capture root; direct screen roots also use `background`/`Surface` |
+| Exercise hierarchy | `ExercisePlayerRedesignRenderTest` (JVM Compose render) | Existing render cases green before this batch | Focused run failed: `exerciseQuestion` tag was absent | 5 exercise tests green | Four independently-labelled options must each appear exactly once | Removed redundant radio/checkbox and duplicated letter-badge text while preserving card semantics |
+| Theory and states | `SupportingSurfacesRedesignRenderTest` (JVM Compose render) | Existing supporting-surface cases green before this batch | Focused run failed: chapter/numbered-step and activity skeleton/empty-card nodes were absent | 8 supporting-surface tests green | Three numbered steps, two loading choice skeletons, plus branded empty action | Reused theme surfaces/cards; no new route or state contract |
+
+### Work Unit Evidence
+
+| Evidence | Result |
+|---|---|
+| Observed RED | `bash ./gradlew :composeApp:jvmTest --console=plain --no-daemon --tests '*ExercisePlayerRedesignRenderTest' --tests '*SupportingSurfacesRedesignRenderTest' --tests '*Slice6VisualAcceptanceCaptureTest'` → **BUILD FAILED**, 14 tests / 5 expected assertion failures (opaque capture, missing exercise hierarchy, missing theory/state hierarchy). |
+| Focused GREEN + runtime harness | Same command → **BUILD SUCCESSFUL**, 14 tests, 0 failures/errors. It rendered the real player, theory, onboarding, and state composables and regenerated all five captures. |
+| Historical full required result | `bash ./gradlew :composeApp:jvmTest --console=plain --no-daemon` → **BUILD SUCCESSFUL**, 31 suites / 157 tests, 0 failures/errors/skips. |
+| Capture outputs | `composeApp/build/visual-acceptance/current/task-6.7-{exercise,theory,onboarding,empty,loading}.png`; `file` verified each as 300×624 8-bit RGBA PNG. |
+| Rollback boundary | Revert only Slice 6d hunks in `LessonMapScreen.kt`, `TheorySheet.kt`, `PlaceholderScreen.kt`, `OnboardingScreen.kt`, and the three Slice 6 JVM render/capture tests; no model, route, persistence, or backend contract changes. |
+
+### Scope, Budget, and Pending Acceptance
+
+- Authored Slice 6d source/test delta: **322 additions/deletions from the generation's received worktree snapshot**, within the 400-line cap; existing uncommitted Slice 6a–6c worktree changes remain outside this corrective bound. Documentation and generated PNGs are excluded from the source budget.
+- No staging, commit, push, review, archive, delegation, or runtime-ledger edit occurred.
+- Historical pending state: parent visual comparison against `ejercicio-gameplay.png`, `teoria-leccion.png`, `estado-carga.png`, and `estado-vacio.png` was required; task 6.7 was later accepted.
+
+## Slice 6e Parent Manual Visual Acceptance (Historical; Superseded by Canonical Final State)
+
+- This parent acceptance supersedes the historical Slice 6d pending-acceptance wording above: task 6.7 is now accepted and complete.
+- Compared regenerated opaque 300×624 captures against canonical `docs/ui/screens` references.
+- **Exercise — PASS**: immersive player, title/question, hearts/progress, unique options, hint, and CTA hierarchy match; fixture copy/option count differs, while type-specific content remains supported.
+- **Theory — PASS**: concept, numbered steps, example, and navigation hierarchy match while preserving the sheet architecture.
+- **Loading — PASS**: exercise skeleton structure matches. **Empty — PASS**: scoped branded activity-empty card matches, not a full dashboard host.
+- **Onboarding — PASS**: approved spec/design tokens and hierarchy match. No valid canonical wizard PNG exists; `splash-bienvenida` is explicitly out of scope.
+- Historical test support was 14 focused GREEN tests and full JVM 31 suites / 157 tests. Current final evidence is 31 suites / 158 tests; earlier manual tasks are resolved.
+
+## Remaining Visual Capture Evidence
+
+- Generated opaque 300×624 RGBA captures for parent comparison: `task-1.9-login.png`, `task-2.4-register-step{1,2,3}.png`, `task-4.5-home.png`, and `task-5.6-lesson-map.png` under `composeApp/build/visual-acceptance/current/`.
+- Historical focused capture test: **BUILD SUCCESSFUL**; historical full JVM suite: **BUILD SUCCESSFUL**, 31 suites / 157 tests, 0 failures/errors/skips.
+- Historical capture record only: parent subsequently accepted 1.9, 2.4, 4.5, and 5.6; 3.5 was waived under Profile v2. No production or profile changes were made.
+
+## Generation 8 Remaining Visual Defects
+
+- RED: focused render suite exposed the unsupported greeting emoji assertion; capture review exposed Google wrapping, compact-header title wrapping, and step-3 viewport pressure.
+- Historical GREEN: Google is single-line, Auth scaffold vertical spacing is compacted, greeting uses supported text, and lesson titles use one-line ellipsis. Focused 14-test suite and full JVM suite both **BUILD SUCCESSFUL**; historical full result 31 suites / 157 tests, 0 failures/errors/skips.
+- Regenerated captures remain under `composeApp/build/visual-acceptance/current/`: tasks 1.9, 2.4 steps 1–3, 4.5, and 5.6; each is 300×624 RGBA. These manual tasks are now accepted.
+
+### Final Generation-8 Evidence
+
+- Historical handoff: parent accepted regenerated captures for tasks 1.9, 2.4, 4.5, and 5.6; the parent subsequently persisted their checkboxes as complete.
+- Historical full `bash ./gradlew :composeApp:jvmTest --console=plain --no-daemon` → **BUILD SUCCESSFUL**, 31 suites / 157 tests, 0 failures/errors/skips. `git diff --check` passed.
+- Generation-8 authored correction remains approximately 21 changed lines, below the 200-line cap.
+
+## Parent Manual Acceptance — Remaining Visual Tasks
+
+- **1.9, 2.4, 4.5, 5.6 — ACCEPTED**: parent inspected deterministic opaque 300×624 captures for login, register steps 1–3, home, and lesson map. Historical Generation-8 focused GREEN and full JVM evidence recorded 31 suites / 157 tests; canonical final state is 31 suites / 158 tests.
+- **3.5 — WAIVED/COMPLETE**: canonical `perfil-usuario.png` conflicts structurally with the approved Profile v2 navigation-hub specification. Profile v2 is authoritative; no PNG conformance is claimed and no profile production change was made.
+- All parent manual visual tasks are now complete; this record preserves prior conflict analysis and does not alter code, tests, runtime ledger, or delivery state.
+
+## Generation 10 Apply — Exercise Verification Remediation
+
+### Authority and Scope
+
+- Native request: `ui-redesign-exercise-coverage-20260815`; attempt token `sha256:28b6e880c673cefd6e58c85edb8750cc92d6a1081eb6141583f7e629b056eb6e`.
+- Failed evidence being remediated: `sha256:59b07a56b4ef475c7ffae340da181e21b8d5c1ba173e7c190407228cebf9ced5`.
+- Delivery remains `stacked-to-main`; this bounded unit covers exercise rendering, submission shaping, retry behavior, existing server validation, and role filtering. It makes no backend/shared production change and does not claim final verification.
+- Mode: **Standard** (`strict_tdd: false` in `openspec/config.yaml`).
+
+### Completed Task
+
+- [x] **7.4a** Added runtime coverage for the `InputValue` field/callback, `MultiSelect` grid/selection callback, safe incompatible payload/draft fallback, trimmed input submissions, partial then exact multi-select submissions, and three consecutive incorrect attempts followed by a successful advance.
+- [x] **7.4b** Added focused server tests proving single-choice correctness, trimmed-input correctness, exact-set acceptance, partial-set rejection, and STUDENT-hidden versus ADMIN-visible correct fields for all three typed payloads.
+- Added the stable `exerciseInputValue` semantics tag. The existing confirmation test now clicks its stable tag instead of locale-specific Spanish copy.
+
+### Exercise Scenario Evidence
+
+| Scenario | Evidence | Status |
+|---|---|---|
+| InputValue renders text input | Real `LessonMapContent` render finds `exerciseInputValue` and dispatches typed text | Covered |
+| MultiSelect renders in answer grid | Real render finds four answer cards, two selected nodes, and dispatches an independent toggle | Covered |
+| Unknown/fallback payload | Incompatible typed payload/draft reaches the production fallback without crashing | Partial: the sealed shared payload model cannot construct an unknown subtype; unknown serialization behavior is outside this Compose-only unit |
+| MultipleChoice single-option submission | Existing client dispatch test plus `ExercisePayloadSupport.evaluateAttempt` with correct option B | Covered |
+| InputValue trimmed submission | ViewModel sends trimmed input; server evaluator accepts `" 42 "` for correct value `"42"` | Covered |
+| MultiSelect exact set / partial rejection | Client submits partial then changed exact set; server evaluator accepts `{A,C}` and rejects `{A}` | Covered |
+| Multiple wrong attempts do not block | Three incorrect responses reduce lives to zero without closing the player; the fourth correct response completes and advances | Covered |
+| Student/admin answer hiding | `LessonService.getLessonByIdForUser` returns null correct fields for STUDENT and populated fields for ADMIN across all payload types | Covered without production changes |
+
+### Work Unit Evidence
+
+| Evidence | Result |
+|---|---|
+| Baseline focused command | `bash ./gradlew :composeApp:jvmTest --console=plain --no-daemon --tests '*ExercisePlayerRedesignRenderTest' --tests '*LessonMapViewModelTest'` → **BUILD FAILED**, 12 tests / 1 failure because the pre-existing confirmation test searched Spanish `Confirmar` while the active resources rendered another locale. This was test coupling, not a production failure. |
+| Focused test + runtime harness | `bash ./gradlew :composeApp:jvmTest --console=plain --no-daemon --rerun-tasks --tests '*ExercisePlayerRedesignRenderTest' --tests '*LessonMapViewModelTest'` → **BUILD SUCCESSFUL**, 2 suites / 18 tests, 0 failures/errors/skips. The JVM Compose harness rendered the real player branches and the ViewModel harness exercised real draft-to-submission and retry transitions. |
+| Focused server runtime | `bash ./gradlew :server:test --console=plain --no-daemon --rerun-tasks --tests '*LessonExerciseServiceTest'` → **BUILD SUCCESSFUL**, 1 suite / 12 tests, 0 failures/errors/skips. |
+| Full required command | `bash ./gradlew :composeApp:jvmTest --console=plain --no-daemon --rerun-tasks` → **BUILD SUCCESSFUL**, 31 suites / 164 tests, 0 failures/errors/skips. |
+| Runtime boundary | Real `LessonMapContent`, `LessonMapViewModel`, `ExercisePayloadSupport`, and role-aware `LessonService` paths were exercised; server correctness was not inferred from fake client responses. |
+| Rollback boundary | Revert only the Generation 10 hunks in `LessonMapScreen.kt`, `LessonMapViewModelTest.kt`, `ExercisePlayerRedesignRenderTest.kt`, and the 7.4 task/progress entries. Earlier redesign implementation and evidence remain intact. |
+
+### Budget and Remaining Work
+
+- Complete authored objective delta: **386 changed lines** (`+365/-21`, including task/progress evidence), below the 400-line cap. No generated golden was added.
+- Remaining: 7.4c other capability gaps; 7.4d independent final verification.
+- No stage, commit, review, finalize, settle, archive, or modification outside `/tmp/mathimapp-ui-redesign-native2` occurred.
+
+## Generation 11 Apply — UI Lifecycle Verification Remediation
+
+### Authority and Scope
+
+- Native request: `ui-redesign-ui-lifecycle-20260815`; attempt token `sha256:2ab8e0c413460057a8ff80cc11834386c2cea91ab3365fcd93a9bff23761163b`.
+- Work unit: `verification-remediation-ui-lifecycle`; delivery remains `stacked-to-main`; mode is **Standard** (`strict_tdd: false`).
+- This unit completes 7.4c only. Task 7.4d and archive readiness remain pending.
+
+### Runtime Coverage
+
+- Auth render tests prove both social providers are no-ops, forgot-password dispatches its recovery callback and state, and Register step-1 Back clears wizard state before returning to Login.
+- JetBrains Mono SemiBold and its official OFL are bundled; the step label now loads that resource instead of generic system monospace.
+- Existing Home render tests directly invoke empty-learning and lesson-map callbacks; no catalog destination is claimed. New runtime proof locks a streak of 3 below the cap while retaining the existing 12→7 proof.
+- Lesson-map tests now invoke the Current node callback and the production path-style decision for locked (dashed) versus actionable/completed (solid) destinations.
+- Onboarding uses `SavedStateHandle` primitives to restore step, province, category, available years, and selected year after ViewModel recreation. Completion persists the learner profile and refreshes `AuthGate` into `AuthenticatedHomeScaffold`; no production `CourseScreen` or catalog-filter route is claimed.
+- Profile v2 is now explicitly authoritative in proposal, design, and profile spec; the conflicting PNG concept is deferred rather than silently claimed compliant.
+
+### Work Unit Evidence
+
+| Evidence | Result |
+|---|---|
+| First focused compile | Failed on a nullable-list assertion type in the new handoff probe; corrected without a production workaround. |
+| Second focused run | 46 tests, 2 test-fixture assertion failures (merged summary text and probing the wrong dashboard repository); both probes were corrected to exercise the actual contract. |
+| Focused runtime harness | `:composeApp:jvmTest --rerun-tasks` across Auth, Onboarding, Course, Home, and Lesson-map suites → **BUILD SUCCESSFUL**, 7 suites / 48 tests. |
+| Font identity | `jetbrains_mono_semibold.ttf` SHA-256 `12d4b18fe6e1af528e4bea69cb0997aeff22f9e52fccffcf66342dd88aa32ab8`; `JetBrainsMono-OFL.txt` SHA-256 `a76abf002c49097d146e86740a3105a5d00450b1592e820a1109a8c5680cd697`. |
+| Rollback | Revert only Generation 11 hunks in App/Auth/Register/Onboarding/Home/Lesson-map source and focused tests, remove the two JetBrains resource files, and revert the Generation 11 task/spec/progress entries. |
+
+- Register's three deterministic captures were regenerated because the intentional step-1 Back control and bundled font change the surface. New SHA-256 values: step 1 `e55a6c...54f7`, step 2 `cc4ae6...0c67`, step 3 `bfbd5c...ab8a`; the focused capture harness passes with these candidate-generated images.
+- Required full `bash ./gradlew :composeApp:jvmTest --console=plain --no-daemon --rerun-tasks` → **BUILD SUCCESSFUL**, 31 suites / 171 tests, 0 failures/errors/skips.
+- `git diff --check` passes. Objective delta is 269 tracked changed lines plus 93 verbatim OFL lines = **362 authored/text lines**; the downloaded TTF binary is excluded by policy. No size exception is used.
+- No Gradle/Java process remains; no stage, commit, review, finalize, settle, or archive occurred.
+
+## RDD Correction — Final Review R3
+
+- Authority: lineage `review-89c318a5d1780c7b`, generation 1, revision `sha256:a792ed66f9055deffd5d5f5a44803b0dd0b6f2fffa81d9f01f6a899fc5bfb4fe`.
+- R3-001: forgot-password now enters a production-wired recovery destination with a real Back route; no nonexistent reset endpoint is claimed.
+- R3-002/R3-003: the delta specs now name the actual Lesson Map and authenticated-home destinations; catalog, `CourseScreen`, and catalog-filter claims were removed and tracked as separate debt.
+- R3-004: restored the localized greeting wave and refreshed only the affected deterministic Home capture baseline (`7d4558...b9df`).
+- Warning remediation: stale saved enum names safely fall back; proposal/design acknowledge bounded reliability behavior. Full hardcoded-copy resource migration is deferred as a separate localization unit.
+- Focused runtime: 5 suites / 38 tests passed. Full `:composeApp:jvmTest --rerun-tasks`: 31 suites / 174 tests passed. `git diff --check` passed.

@@ -2,7 +2,7 @@
 
 ## Intent
 
-Bring every already-implemented Compose screen into visual compliance with the updated redesign references in `docs/ui/screens/`. This is a visual-only pass: no functional behavior, navigation flow, or state contract changes.
+Bring every already-implemented Compose screen into visual compliance with the updated redesign references in `docs/ui/screens/`, plus bounded remediation needed to keep exposed navigation and retained UI state truthful. Backend and shared contracts remain unchanged.
 
 ## Scope
 
@@ -30,7 +30,7 @@ Bring every already-implemented Compose screen into visual compliance with the u
 
 ## Approach
 
-Foundation-first delivery: Slice 1 updates `TypeTokens` (Sora), `ShapeTokens` (radii), `ColorTokens` (track, lock, stripe), and primitive shadows (`MButton`, `MCard`). Subsequent slices apply tokens to each feature area. Redesign PNGs are the visual source of truth; `docs/ui/screens/old/` provides the design delta.
+Foundation-first delivery: Slice 1 updates `TypeTokens` (Sora), `ShapeTokens` (radii), `ColorTokens` (track, lock, stripe), and primitive shadows (`MButton`, `MCard`). Subsequent slices apply tokens to each feature area. Redesign PNGs are the visual source of truth except for Profile, where the approved Profile v2 navigation-hub delta is authoritative; `docs/ui/screens/old/` provides the design delta.
 
 ## Affected Areas
 
@@ -69,7 +69,7 @@ None external. Internal: Foundation slice merges before feature slices to avoid 
 ## Success Criteria
 
 - [ ] Login and Register screens match Jul 16 handoff (font, shadows, radii, checkbox, step indicator).
-- [ ] Profile hub matches `perfil-usuario.png` (streak chip, icon boxes, card radius, logout card, list icons).
+- [x] Profile hub matches the approved Profile v2 navigation-hub delta; `perfil-usuario.png` is a superseded structural concept and is not a conformance target for this change.
 - [ ] Home Dashboard matches `inicio-dashboard.png` (pending pixel confirmation).
 - [ ] Lesson Map matches `mapa-leccion.png` (graphical path, circular nodes, progress bar, pill theory button).
 - [ ] Exercise Player matches `ejercicio-gameplay.png` (lives, progress bar, close icon, grid answers, hint, CTA shadow).

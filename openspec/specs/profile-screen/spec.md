@@ -43,28 +43,33 @@ The system SHALL render a `Scaffold` with a `NavigationBar` of four tabs — Ini
 
 ### Requirement: Profile Screen Layout
 
-The system SHALL display a hub layout with: avatar with edit badge overlay, user display name, email, role chip, four navigation cards (Cuenta, Preferencias, Ayuda y soporte, Acerca de), logout button, and version caption. Sub-screen composables render via enum-driven switcher when navigation cards are tapped. The existing loading and error branches SHALL remain available before hub content renders.
-(Previously: Gamified dashboard with avatar, name, level badge, XP progress bar, stat tiles, and achievements grid.)
+The system SHALL display hub layout: avatar (92px circle, coral initials, coral edit badge), name (21px/800), email (12px/500 muted), role chip (teal), **streak chip** ("Racha N días" coral with flame), four nav cards (18px radius, 42×42px colored SVG icon boxes, 13px radius), **logout card** (surface card, logout icon + centered text, 16px radius), version caption ("MathimApp · versión X.Y.Z"). Sub-screens via enum switcher. Loading/error preserved.
+(Previously: Avatar, name, email, role chip, nav cards with text-symbol boxes, outline logout button, hardcoded "X" version.)
 
-#### Scenario: Profile screen shows hub identity section
+#### Scenario: Profile shows hub identity
 
-- GIVEN the user navigates to the Perfil tab
-- THEN avatar with edit badge, name, email, and role chip are visible
+- GIVEN user navigates to Perfil tab
+- THEN avatar, name, email, role chip, streak chip visible
 
-#### Scenario: Profile screen shows navigation cards
+#### Scenario: Profile shows nav cards with icon boxes
 
-- GIVEN the hub view is active
-- THEN four navigation cards render: Cuenta, Preferencias, Ayuda y soporte, Acerca de
+- GIVEN hub view active
+- THEN four nav cards with 18px radius, 42×42px colored SVG icon boxes
 
 #### Scenario: Missing avatar uses placeholder
 
-- GIVEN the user model has no `avatarUrl`
-- THEN the avatar section SHALL display initials or a generic icon
+- GIVEN no `avatarUrl`
+- THEN initials in coral on surface2 background
 
-#### Scenario: Logout button remains accessible
+#### Scenario: Logout renders as card
 
-- GIVEN the hub view is active
-- THEN a logout button is visible and functional with existing logout behavior unchanged
+- GIVEN hub view active
+- THEN surface card with logout icon and "Cerrar sesión" text
+
+#### Scenario: Version caption displays dynamic version
+
+- GIVEN hub view active
+- THEN "MathimApp · versión" + app version string
 
 ### Requirement: Client-Derived Gamification Metrics
 
@@ -189,3 +194,45 @@ The system SHALL preserve the existing `Scaffold` with `NavigationBar` of four t
 - WHEN the user taps the Perfil tab
 - THEN the ProfileScreen composes with Hub as the default sub-screen
 
+### Requirement: Streak Chip Visual
+
+The system SHALL display streak chip next to role chip: "Racha N días" coral text with flame icon, pill styling (surface bg, 1px line border, 999px radius).
+
+#### Scenario: Streak chip renders with flame icon
+
+- GIVEN authenticated user with streak
+- WHEN hub composes
+- THEN coral pill with flame icon and "Racha N días" next to role chip
+
+#### Scenario: Streak chip matches role chip styling
+
+- GIVEN both chips render
+- THEN same height, padding, radius, border
+
+### Requirement: Navigation Card Icon Boxes
+
+Each nav card SHALL have colored SVG icon box: Cuenta (coral, person), Preferencias (teal, gear), Ayuda (rose, help-circle), Acerca de (muted, info). Box: 42×42px, 13px radius, surface2 bg.
+
+#### Scenario: Cuenta card has coral icon box
+
+- GIVEN hub renders
+- THEN Cuenta card has 42×42px coral icon box with person SVG
+
+#### Scenario: Preferencias card has teal icon box
+
+- GIVEN hub renders
+- THEN Preferencias card has 42×42px teal icon box with gear SVG
+
+### Requirement: Sub-Screen List Row Icons
+
+Sub-screen rows SHALL have leading 18px muted SVG icon matching row purpose.
+
+#### Scenario: Cuenta rows have leading icons
+
+- GIVEN Cuenta sub-screen renders
+- THEN rows have leading 18px muted SVG icons (person, mail, lock)
+
+#### Scenario: Preferencias rows have leading icons
+
+- GIVEN Preferencias sub-screen renders
+- THEN rows have leading 18px muted SVG icons (bell, volume, moon, globe)

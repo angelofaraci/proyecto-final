@@ -58,16 +58,15 @@ The system SHALL render "Continuar aprendiendo" card when no in-progress lesson.
 - GIVEN "Fracciones - Básico" at 45%
 - THEN icon, title, "Progreso: 45%", teal "Ir" pill
 
-### Requirement: Catalog CTA
+### Requirement: Lesson Map CTA
 
-The system SHALL provide secondary CTA navigating to course catalog in Activities tab.
-(No change to behavior.)
+The system SHALL provide a secondary CTA navigating to the lesson map in the Activities tab. This change does not claim a catalog destination; a course catalog requires its own production route.
 
-#### Scenario: Catalog CTA navigates correctly
+#### Scenario: Lesson map CTA navigates correctly
 
 - GIVEN dashboard visible
-- WHEN catalog CTA tapped
-- THEN navigates to Activities with catalog view
+- WHEN lesson map CTA tapped
+- THEN navigates to Activities with the lesson map view
 
 ### Requirement: Synthetic Streak Display
 

@@ -9,6 +9,17 @@
 - Allow teachers to view student progress only for courses they own.
 - Clarify enrollment, ownership transfer, and admin override rules.
 
+### Make the Profile tab functional
+
+- Replace the current no-op profile actions with working flows while preserving the existing profile hub and sub-screen layout.
+- Account: edit the display name and email, change the password, and define a confirmed destructive account-deletion flow.
+- Preferences: persist notification and sound settings; add language selection. Keep dark-mode switching separately scoped until runtime theme support exists.
+- Help and About: provide FAQ, support contact, issue reporting, terms, and privacy destinations using real content or platform links.
+- Avatar: add a platform-capable avatar selection/update flow instead of the current placeholder callback.
+- Render the existing typed `schoolYear` and `studentTrack` profile state where it helps the learner understand their account.
+- Preserve logout, the dynamic app-version caption, role display, streak, and existing profile navigation behavior.
+- Define backend/API and local-persistence requirements before implementation; do not treat visual navigation stubs as completed functionality.
+
 ### Learning paths
 
 - Reference brief: `openspec/learning-paths-brief.md`
@@ -60,6 +71,8 @@
 - Archive evidence: `openspec/changes/archive/2026-06-22-role-naming-cleanup/` (23/23 tasks; 65 tests passing).
 
 ### Onboarding and navigation bug fixes
+
+- **Catalog navigation debt:** Activities currently hosts `LessonMapScreen`; introducing a real catalog destination and school-year-filtered catalog route remains a separate capability change, not part of `ui-redesign-sync`.
 
 Four issues found by manual QA on the current onboarding/auth flow. Tackle one at a time.
 
