@@ -24,6 +24,7 @@ import com.example.proyectofinal.ui.LoginScreen
 import com.example.proyectofinal.ui.LoginViewModel
 import com.example.proyectofinal.ui.OnboardingScreen
 import com.example.proyectofinal.ui.OnboardingViewModel
+import com.example.proyectofinal.ui.PasswordRecoveryScreen
 import com.example.proyectofinal.ui.RegisterScreen
 import com.example.proyectofinal.ui.RegisterViewModel
 import com.example.proyectofinal.ui.resolveAuthView
@@ -78,7 +79,7 @@ private fun AuthGate() {
     }
 
     when (resolveAuthView(session, target, onboardingComplete = onboardingComplete ?: false)) {
-        AuthView.COURSE -> AuthenticatedHomeScaffold(onLogout = authRepository::logout)
+        AuthView.AUTHENTICATED_HOME -> AuthenticatedHomeScaffold(onLogout = authRepository::logout)
 
         AuthView.TEACHER -> TeacherDashboardScreen(
             viewModel = koinViewModel<TeacherDashboardViewModel>(
@@ -91,11 +92,15 @@ private fun AuthGate() {
 
         AuthView.LOGIN -> LoginScreen(
             viewModel = koinViewModel<LoginViewModel>(),
-            onSwitchToRegister = router::switchToRegister
+            onSwitchToRegister = router::switchToRegister,
+            onForgotPassword = router::switchToRecovery
         )
 
+        AuthView.RECOVERY -> PasswordRecoveryScreen(onBackToLogin = router::switchToLogin)
+
         AuthView.REGISTER -> RegisterScreen(
-            viewModel = koinViewModel<RegisterViewModel>()
+            viewModel = koinViewModel<RegisterViewModel>(),
+            onSwitchToLogin = router::switchToLogin
         )
 
         AuthView.ONBOARDING -> OnboardingScreen(

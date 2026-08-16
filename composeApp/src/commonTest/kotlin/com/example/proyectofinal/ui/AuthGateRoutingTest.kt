@@ -92,7 +92,7 @@ class AuthGateViewModelTest {
         val router = AuthGateViewModel().apply { switchToRegister() }
 
         assertEquals(
-            AuthView.COURSE,
+            AuthView.AUTHENTICATED_HOME,
             resolveAuthView(authenticated, router.target.value, onboardingComplete = true)
         )
     }
@@ -145,5 +145,19 @@ class AuthGateViewModelTest {
         val reusedViewModel = viewModel
 
         assertEquals(AuthScreenTarget.REGISTER, reusedViewModel.target.value)
+    }
+
+    @Test
+    fun `forgot password routes to recovery and back to login`() {
+        val router = AuthGateViewModel()
+
+        router.switchToRecovery()
+        assertEquals(
+            AuthView.RECOVERY,
+            resolveAuthView(AuthSession(), router.target.value, onboardingComplete = false)
+        )
+
+        router.switchToLogin()
+        assertEquals(AuthScreenTarget.LOGIN, router.target.value)
     }
 }

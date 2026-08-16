@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -15,9 +16,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -46,7 +44,9 @@ import proyectofinal.composeapp.generated.resources.login_no_account_prompt
 import proyectofinal.composeapp.generated.resources.login_password_hide_description
 import proyectofinal.composeapp.generated.resources.login_password_label
 import proyectofinal.composeapp.generated.resources.login_password_show_description
-import proyectofinal.composeapp.generated.resources.login_recovery_placeholder
+import proyectofinal.composeapp.generated.resources.login_recovery_back
+import proyectofinal.composeapp.generated.resources.login_recovery_description
+import proyectofinal.composeapp.generated.resources.login_recovery_title
 import proyectofinal.composeapp.generated.resources.login_social_apple
 import proyectofinal.composeapp.generated.resources.login_social_google
 import proyectofinal.composeapp.generated.resources.login_subtitle
@@ -55,7 +55,8 @@ import proyectofinal.composeapp.generated.resources.login_title
 @Composable
 fun LoginScreen(
     viewModel: LoginViewModel,
-    onSwitchToRegister: () -> Unit
+    onSwitchToRegister: () -> Unit,
+    onForgotPassword: () -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsState()
     LoginContent(
@@ -64,7 +65,8 @@ fun LoginScreen(
         onPasswordChange = viewModel::onPasswordChange,
         onTogglePasswordVisibility = viewModel::togglePasswordVisibility,
         onLogin = viewModel::login,
-        onSwitchToRegister = onSwitchToRegister
+        onSwitchToRegister = onSwitchToRegister,
+        onForgotPassword = onForgotPassword
     )
 }
 
@@ -75,9 +77,9 @@ private fun LoginContent(
     onPasswordChange: (String) -> Unit,
     onTogglePasswordVisibility: () -> Unit,
     onLogin: () -> Unit,
-    onSwitchToRegister: () -> Unit
+    onSwitchToRegister: () -> Unit,
+    onForgotPassword: () -> Unit
 ) {
-    var showRecoveryPlaceholder by remember { mutableStateOf(false) }
     AuthScreenScaffold(
         formTitle = stringResource(Res.string.login_title),
         formSubtitle = stringResource(Res.string.login_subtitle)
@@ -141,18 +143,10 @@ private fun LoginContent(
                 text = stringResource(Res.string.login_forgot_password),
                 modifier = Modifier
                     .align(Alignment.End)
-                    .clickable { showRecoveryPlaceholder = true },
+                    .clickable(onClick = onForgotPassword),
                 color = MaterialTheme.colorScheme.primary,
                 style = MaterialTheme.typography.bodyMedium
             )
-
-            if (showRecoveryPlaceholder) {
-                Text(
-                    text = stringResource(Res.string.login_recovery_placeholder),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
 
             if (state.errorMessage != null) {
                 Text(
@@ -230,6 +224,22 @@ private fun LoginContent(
 }
 
 @Composable
+fun PasswordRecoveryScreen(onBackToLogin: () -> Unit) {
+    AuthScreenScaffold(
+        formTitle = stringResource(Res.string.login_recovery_title),
+        formSubtitle = stringResource(Res.string.login_recovery_description)
+    ) {
+        MButton(
+            onClick = onBackToLogin,
+            modifier = Modifier.fillMaxWidth(),
+            style = MButtonStyle.Outline
+        ) {
+            Text(stringResource(Res.string.login_recovery_back))
+        }
+    }
+}
+
+@Composable
 private fun SocialButton(
     text: String,
     logo: @Composable () -> Unit,
@@ -239,10 +249,10 @@ private fun SocialButton(
         onClick = {},
         modifier = modifier,
         style = MButtonStyle.Social
+        ,contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
     ) {
         logo()
-        Spacer(modifier = Modifier.size(8.dp))
-        Text(text, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.size(4.dp))
+        Text(text, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
     }
 }
-

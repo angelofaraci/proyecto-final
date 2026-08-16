@@ -46,7 +46,10 @@
     <string name="lesson_map_exercise_unnumbered">Ejercicio</string>
     <string name="lesson_map_action_checking_answer">Verificando respuesta...</string>
     <string name="lesson_map_action_try_again">Intentar de nuevo</string>
-    <string name="lesson_map_action_submit_answer">Enviar respuesta</string>
+    <string name="lesson_map_action_submit_answer">Confirmar</string>
+    <string name="lesson_map_action_hint">Pista</string>
+    <string name="lesson_map_question_counter">Pregunta %1$d/%2$d</string>
+    <string name="lesson_map_close_exercise_content_description">Cerrar ejercicio</string>
     <string name="lesson_map_answer_label">Respuesta</string>
     <string name="lesson_map_exercise_unsupported">Este tipo de ejercicio no es compatible con esta versión de la aplicación.</string>
     <string name="lesson_map_node_completed_description">Lección completada</string>
@@ -89,7 +92,9 @@
     <string name="login_password_hide_description">Ocultar contraseña</string>
     <string name="login_password_show_description">Mostrar contraseña</string>
     <string name="login_forgot_password">¿Olvidaste tu contraseña?</string>
-    <string name="login_recovery_placeholder">La recuperación de contraseña estará disponible próximamente.</string>
+    <string name="login_recovery_title">Recuperar contraseña</string>
+    <string name="login_recovery_description">Contacta al administrador de tu escuela para restablecer el acceso a tu cuenta.</string>
+    <string name="login_recovery_back">Volver al inicio de sesión</string>
     <string name="login_action_logging_in">Iniciando sesión...</string>
     <string name="login_action_login">Iniciar sesión</string>
     <string name="login_divider_or">o continúa con</string>

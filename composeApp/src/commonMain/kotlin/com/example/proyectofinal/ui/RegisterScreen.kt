@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -34,6 +35,7 @@ import com.example.proyectofinal.ui.primitives.MButton
 import com.example.proyectofinal.ui.primitives.MTextField
 import com.example.proyectofinal.ui.theme.AppThemeDefaults
 import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.compose.resources.Font
 import proyectofinal.composeapp.generated.resources.Res
 import proyectofinal.composeapp.generated.resources.register_action_back
 import proyectofinal.composeapp.generated.resources.register_action_continue
@@ -54,10 +56,12 @@ import proyectofinal.composeapp.generated.resources.register_step_indicator
 import proyectofinal.composeapp.generated.resources.register_subtitle
 import proyectofinal.composeapp.generated.resources.register_terms_text
 import proyectofinal.composeapp.generated.resources.register_title
+import proyectofinal.composeapp.generated.resources.jetbrains_mono_semibold
 
 @Composable
 fun RegisterScreen(
-    viewModel: RegisterViewModel
+    viewModel: RegisterViewModel,
+    onSwitchToLogin: () -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsState()
     RegisterContent(
@@ -68,7 +72,12 @@ fun RegisterScreen(
         onTogglePasswordVisibility = viewModel::togglePasswordVisibility,
         onAcceptedTermsChange = viewModel::setAcceptedTerms,
         onContinue = viewModel::continueStep,
-        onBack = viewModel::goBack
+        onBack = {
+            if (state.step == 1) {
+                viewModel.reset()
+                onSwitchToLogin()
+            } else viewModel.goBack()
+        }
     )
 }
 
@@ -118,15 +127,13 @@ private fun RegisterContent(
                 )
             }
 
-            if (state.step > 1) {
-                MButton(
-                    onClick = onBack,
-                    enabled = !state.isLoading,
-                    modifier = Modifier.fillMaxWidth(),
-                    style = com.example.proyectofinal.ui.primitives.MButtonStyle.Outline
-                ) {
-                    Text(stringResource(Res.string.register_action_back))
-                }
+            MButton(
+                onClick = onBack,
+                enabled = !state.isLoading,
+                modifier = Modifier.fillMaxWidth(),
+                style = com.example.proyectofinal.ui.primitives.MButtonStyle.Outline
+            ) {
+                Text(stringResource(Res.string.register_action_back))
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -136,6 +143,7 @@ private fun RegisterContent(
 
 @Composable
 private fun WizardStepIndicator(currentStep: Int) {
+    val jetBrainsMono = FontFamily(Font(Res.font.jetbrains_mono_semibold, FontWeight.SemiBold))
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -154,7 +162,7 @@ private fun WizardStepIndicator(currentStep: Int) {
     }
     Text(
         text = stringResource(Res.string.register_step_indicator, currentStep),
-        style = MaterialTheme.typography.labelMedium.copy(fontFamily = FontFamily.Monospace),
+        style = MaterialTheme.typography.labelMedium.copy(fontFamily = jetBrainsMono),
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
 }

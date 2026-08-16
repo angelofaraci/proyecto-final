@@ -46,7 +46,10 @@
     <string name="lesson_map_exercise_unnumbered">Exercise</string>
     <string name="lesson_map_action_checking_answer">Checking answer...</string>
     <string name="lesson_map_action_try_again">Try again</string>
-    <string name="lesson_map_action_submit_answer">Submit answer</string>
+    <string name="lesson_map_action_submit_answer">Confirm</string>
+    <string name="lesson_map_action_hint">Hint</string>
+    <string name="lesson_map_question_counter">Question %1$d/%2$d</string>
+    <string name="lesson_map_close_exercise_content_description">Close exercise</string>
     <string name="lesson_map_answer_label">Answer</string>
     <string name="lesson_map_exercise_unsupported">This exercise type is not supported in this app version.</string>
     <string name="lesson_map_node_completed_description">Lesson completed</string>
@@ -89,7 +92,9 @@
     <string name="login_password_hide_description">Hide password</string>
     <string name="login_password_show_description">Show password</string>
     <string name="login_forgot_password">Forgot your password?</string>
-    <string name="login_recovery_placeholder">Password recovery will be available soon.</string>
+    <string name="login_recovery_title">Password recovery</string>
+    <string name="login_recovery_description">Contact your school administrator to reset access to your account.</string>
+    <string name="login_recovery_back">Back to login</string>
     <string name="login_action_logging_in">Logging in...</string>
     <string name="login_action_login">Log in</string>
     <string name="login_divider_or">or continue with</string>

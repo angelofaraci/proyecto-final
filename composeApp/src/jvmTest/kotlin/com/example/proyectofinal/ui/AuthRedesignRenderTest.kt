@@ -54,6 +54,56 @@ class AuthRedesignRenderTest {
     }
 
     @Test
+    fun `social providers are no-ops and forgot password invokes recovery callback`() {
+        var registerTaps = 0
+        var recoveryTaps = 0
+        composeTestRule.setContent {
+            AppTheme {
+                LoginScreen(
+                    LoginViewModel(FakeAuthRepository()),
+                    onSwitchToRegister = { registerTaps++ },
+                    onForgotPassword = { recoveryTaps++ }
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText("Google").performClick()
+        composeTestRule.onNodeWithText("Apple").performClick()
+        assertEquals(0, registerTaps)
+        assertEquals(0, recoveryTaps)
+
+        composeTestRule.onNodeWithText("Forgot your password?").performClick()
+        assertEquals(1, recoveryTaps)
+    }
+
+    @Test
+    fun `password recovery destination returns to login`() {
+        var backTaps = 0
+        composeTestRule.setContent {
+            AppTheme { PasswordRecoveryScreen(onBackToLogin = { backTaps++ }) }
+        }
+
+        composeTestRule.onNodeWithText("Password recovery").assertExists()
+        composeTestRule.onNodeWithText("Back to login").performClick()
+
+        assertEquals(1, backTaps)
+    }
+
+    @Test
+    fun `back from register step one clears state and returns to login`() {
+        val viewModel = RegisterViewModel(FakeAuthRepository()).apply { onNameChange("Ana") }
+        var loginTaps = 0
+        composeTestRule.setContent {
+            AppTheme { RegisterScreen(viewModel, onSwitchToLogin = { loginTaps++ }) }
+        }
+
+        composeTestRule.onNodeWithText("Back").performClick()
+
+        assertEquals(1, loginTaps)
+        assertEquals(RegisterUiState(), viewModel.uiState.value)
+    }
+
+    @Test
     fun `register step label uses handoff copy and follows the wizard step`() {
         val viewModel = RegisterViewModel(FakeAuthRepository())
 

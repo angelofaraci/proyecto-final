@@ -9,14 +9,14 @@ import kotlinx.coroutines.flow.asStateFlow
 /**
  * Which public auth form the gate should render when the user is not authenticated.
  */
-enum class AuthScreenTarget { LOGIN, REGISTER }
+enum class AuthScreenTarget { LOGIN, REGISTER, RECOVERY }
 
 /**
- * Fully resolved view for the top-level auth gate. [ONBOARDING] and [COURSE]
- * take precedence over the form targets once an [AuthSession] is authenticated,
- * so neither Login nor Register is shown in that case.
+ * Fully resolved view for the top-level auth gate. Authenticated teachers route to
+ * [TEACHER], while other authenticated users route to [ONBOARDING] or
+ * [AUTHENTICATED_HOME], so public auth forms are not shown in those states.
  */
-enum class AuthView { COURSE, TEACHER, LOGIN, REGISTER, ONBOARDING }
+enum class AuthView { AUTHENTICATED_HOME, TEACHER, LOGIN, REGISTER, RECOVERY, ONBOARDING }
 
 /**
  * Retained state holder for the auth-gate routing decision.
@@ -43,6 +43,10 @@ class AuthGateViewModel : ViewModel() {
         _target.value = AuthScreenTarget.REGISTER
     }
 
+    fun switchToRecovery() {
+        _target.value = AuthScreenTarget.RECOVERY
+    }
+
     /** Flips the current target LOGIN <-> REGISTER. */
     fun toggle() {
         _target.value =
@@ -55,12 +59,11 @@ class AuthGateViewModel : ViewModel() {
  * Resolves the top-level view from the current session, onboarding completion,
  * and form target.
  *
- * When the session is authenticated the auth area is not shown. Users with a
- * completed learner profile go to [AuthView.COURSE], which renders the
- * authenticated scaffold hosting the dashboard landing. Otherwise they are
- * gated into [AuthView.ONBOARDING]. When the session is anonymous, the
- * selected form target is rendered. This is a pure function so the gate side
- * of the routing behavior is testable.
+ * When the session is authenticated the auth area is not shown. Teachers go to
+ * [AuthView.TEACHER]. Other users with a completed learner profile go to
+ * [AuthView.AUTHENTICATED_HOME], which renders the authenticated scaffold hosting
+ * the dashboard landing; otherwise they are gated into [AuthView.ONBOARDING].
+ * Anonymous sessions render the selected public form target.
  */
 fun resolveAuthView(
     session: AuthSession,
@@ -70,9 +73,10 @@ fun resolveAuthView(
     if (session.user?.role == com.example.proyectofinal.models.UserRole.TEACHER) {
         AuthView.TEACHER
     } else if (session.isAuthenticated) {
-        if (onboardingComplete) AuthView.COURSE else AuthView.ONBOARDING
+        if (onboardingComplete) AuthView.AUTHENTICATED_HOME else AuthView.ONBOARDING
     }
     else when (target) {
         AuthScreenTarget.LOGIN -> AuthView.LOGIN
         AuthScreenTarget.REGISTER -> AuthView.REGISTER
+        AuthScreenTarget.RECOVERY -> AuthView.RECOVERY
     }

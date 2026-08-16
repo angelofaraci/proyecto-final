@@ -116,6 +116,10 @@ class RegisterViewModel(
         }
     }
 
+    fun reset() {
+        if (!_uiState.value.isLoading) _uiState.value = RegisterUiState()
+    }
+
     fun register() {
         val current = _uiState.value
         // Retain the pre-wizard public contract for callers that submit without

@@ -50,7 +50,7 @@ internal fun AuthScreenScaffold(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 26.dp, vertical = 28.dp),
+                .padding(horizontal = 26.dp, vertical = 0.dp),
             contentAlignment = Alignment.TopCenter
         ) {
             Column(
@@ -60,7 +60,7 @@ internal fun AuthScreenScaffold(
                 horizontalAlignment = Alignment.Start
             ) {
                 AuthBrand()
-                Spacer(modifier = Modifier.height(26.dp))
+                Spacer(modifier = Modifier.height(16.dp))
                 // Jul 16 handoff: screen title is 27/800 (headlineMedium). The 32/800 in
                 // design/tasks predates the handoff update and is intentionally not used.
                 Text(
@@ -75,7 +75,7 @@ internal fun AuthScreenScaffold(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(modifier = Modifier.height(22.dp))
+                Spacer(modifier = Modifier.height(14.dp))
                 content()
                 Spacer(modifier = Modifier.height(24.dp))
             }
