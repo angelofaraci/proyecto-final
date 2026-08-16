@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
 import com.example.proyectofinal.ui.theme.AppThemeDefaults
 import com.example.proyectofinal.ui.theme.BrandCoralShadow
@@ -30,13 +31,12 @@ fun MButton(
     enabled: Boolean = true,
     style: MButtonStyle = MButtonStyle.Filled,
     contentPadding: PaddingValues = ButtonDefaults.ContentPadding,
+    shape: Shape = MaterialTheme.shapes.medium,
     content: @Composable RowScope.() -> Unit
 ) {
     val buttonModifier = modifier
         .heightIn(min = 56.dp)
         .alpha(if (enabled) 1f else 0.5f)
-    val shape = MaterialTheme.shapes.medium
-
     when (style) {
         MButtonStyle.Filled -> Button(
             onClick = onClick,
