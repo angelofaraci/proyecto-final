@@ -46,6 +46,12 @@ class HomeDashboardViewModelTest {
     }
 
     @Test
+    fun `streak preserves activity count below the seven-day cap`() {
+        assertEquals(3, activityStreak(3))
+        assertEquals(7, activityStreak(12))
+    }
+
+    @Test
     fun `view model falls back to a generic greeting when display name is blank`() = runTest(dispatcher) {
         val viewModel = HomeDashboardViewModel(
             authRepository = HomeDashboardFakeAuthRepository(testUser.copy(name = "   ")),

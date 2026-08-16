@@ -11,6 +11,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.example.proyectofinal.ui.activities.LessonMapScreen
 import com.example.proyectofinal.ui.home.HomeDashboardScreen
@@ -34,23 +37,29 @@ fun AuthenticatedHomeScaffold(
     router: MainRouterViewModel = koinViewModel<MainRouterViewModel>()
 ) {
     val selectedTab by router.target.collectAsState()
-    val onLogoutAndReset = { logoutFromAuthenticatedHome(router, onLogout) }
+    var isExercisePlayerActive by remember { mutableStateOf(false) }
+    val onLogoutAndReset = {
+        isExercisePlayerActive = false
+        logoutFromAuthenticatedHome(router, onLogout)
+    }
 
     Scaffold(
         bottomBar = {
-            NavigationBar {
-                mainDestinations().forEach { destination ->
-                    NavigationBarItem(
-                        selected = selectedTab == destination.tab,
-                        onClick = { router.select(destination.tab) },
-                        icon = {
-                            Icon(
-                                painter = painterResource(destination.icon),
-                                contentDescription = destination.label
-                            )
-                        },
-                        label = { Text(destination.label) }
-                    )
+            if (homeBottomNavigationVisible(isExercisePlayerActive)) {
+                NavigationBar {
+                    mainDestinations().forEach { destination ->
+                        NavigationBarItem(
+                            selected = selectedTab == destination.tab,
+                            onClick = { router.select(destination.tab) },
+                            icon = {
+                                Icon(
+                                    painter = painterResource(destination.icon),
+                                    contentDescription = destination.label
+                                )
+                            },
+                            label = { Text(destination.label) }
+                        )
+                    }
                 }
             }
         }
@@ -62,13 +71,21 @@ fun AuthenticatedHomeScaffold(
         ) {
             when (selectedTab) {
                 MainTab.HOME -> HomeDashboardScreen(router = router, onLogout = onLogoutAndReset)
-                MainTab.ACTIVITIES -> LessonMapScreen(onShowHome = router::showHome)
-                MainTab.PROGRESS -> PlaceholderScreen(title = stringResource(Res.string.nav_tab_progress))
+                MainTab.ACTIVITIES -> LessonMapScreen(
+                    onShowHome = router::showHome,
+                    onExercisePlayerActiveChanged = { isExercisePlayerActive = it }
+                )
+                MainTab.PROGRESS -> PlaceholderScreen(
+                    title = stringResource(Res.string.nav_tab_progress),
+                    onExploreActivities = router::showActivities
+                )
                 MainTab.PROFILE -> ProfileScreen(onLogout = onLogoutAndReset)
             }
         }
     }
 }
+
+internal fun homeBottomNavigationVisible(isExercisePlayerActive: Boolean): Boolean = !isExercisePlayerActive
 
 internal fun logoutFromAuthenticatedHome(
     router: MainRouterViewModel,

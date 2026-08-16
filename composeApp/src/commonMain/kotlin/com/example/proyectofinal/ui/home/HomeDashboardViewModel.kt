@@ -130,7 +130,7 @@ class HomeDashboardViewModel(
             schoolYear = profile?.schoolYear,
             studentTrack = profile?.studentTrack,
             level = progress.totalScore / XpPerLevel,
-            streak = min(completedLessons, ActivityStreakCap),
+            streak = activityStreak(completedLessons),
             currentXp = progress.totalScore % XpPerLevel,
             xpForNextLevel = XpPerLevel,
             completedLessons = completedLessons,
@@ -157,6 +157,8 @@ class HomeDashboardViewModel(
         emptyList()
     }
 }
+
+internal fun activityStreak(completedLessons: Int): Int = min(completedLessons, 7)
 
 internal fun salutation(hour: Int = currentLocalHour()): String = when (hour) {
     in MorningHours -> "Buenos días"
