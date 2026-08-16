@@ -56,6 +56,7 @@ data class LessonMapUiState(
     val activeExerciseId: String? = null,
     val activeExerciseDraft: ExerciseAnswerDraft? = null,
     val activeExercisePhase: ActiveExercisePhase = ActiveExercisePhase.Drafting,
+    val remainingLives: Int = 3,
     val exerciseFeedback: ExerciseFeedbackUiState? = null,
     val selectedTheoryLesson: Lesson? = null,
     val errorMessage: String? = null

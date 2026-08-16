@@ -10,8 +10,10 @@ import com.example.proyectofinal.models.Exercise
 import com.example.proyectofinal.models.ExerciseAttemptResponse
 import com.example.proyectofinal.models.ExerciseSubmission
 import com.example.proyectofinal.models.InputValuePayload
+import com.example.proyectofinal.models.InputValueSubmission
 import com.example.proyectofinal.models.Lesson
 import com.example.proyectofinal.models.MultiSelectPayload
+import com.example.proyectofinal.models.MultiSelectSubmission
 import com.example.proyectofinal.models.MultipleChoicePayload
 import com.example.proyectofinal.models.MultipleChoiceSubmission
 import com.example.proyectofinal.models.User
@@ -184,6 +186,7 @@ class LessonMapViewModelTest {
         assertEquals("exercise-fractions-1", viewModel.uiState.value.activeExerciseId)
         assertEquals(ActiveExercisePhase.RetryReady, viewModel.uiState.value.activeExercisePhase)
         assertEquals("Incorrect answer. Try again.", viewModel.uiState.value.exerciseFeedbackMessage)
+        assertEquals(2, viewModel.uiState.value.remainingLives)
 
         viewModel.selectMultipleChoiceAnswer("one-quarter")
         viewModel.submitAnswer()
@@ -209,6 +212,137 @@ class LessonMapViewModelTest {
     }
 
     @Test
+    fun `multiple wrong attempts keep retry available until a correct answer advances`() = runTest(dispatcher) {
+        val initialProgress = testProgress()
+        val completedProgress = testProgress(completedExerciseIds = setOf("exercise-fractions-1"))
+        val userRepository = FakeLessonMapUserRepository(
+            progress = initialProgress,
+            attemptResponses = listOf(
+                ExerciseAttemptResponse(
+                    exerciseId = "exercise-fractions-1",
+                    lessonId = "lesson-map-fractions",
+                    isCorrect = false,
+                    progress = initialProgress
+                ),
+                ExerciseAttemptResponse(
+                    exerciseId = "exercise-fractions-1",
+                    lessonId = "lesson-map-fractions",
+                    isCorrect = false,
+                    progress = initialProgress
+                ),
+                ExerciseAttemptResponse(
+                    exerciseId = "exercise-fractions-1",
+                    lessonId = "lesson-map-fractions",
+                    isCorrect = false,
+                    progress = initialProgress
+                ),
+                ExerciseAttemptResponse(
+                    exerciseId = "exercise-fractions-1",
+                    lessonId = "lesson-map-fractions",
+                    isCorrect = true,
+                    progress = completedProgress
+                )
+            )
+        )
+        val viewModel = lessonMapViewModel(userRepository)
+
+        advanceUntilIdle()
+        viewModel.selectExercise("exercise-fractions-1")
+        listOf("one-half", "one-third", "four-over-one").forEach { optionId ->
+            viewModel.selectMultipleChoiceAnswer(optionId)
+            viewModel.submitAnswer()
+            advanceUntilIdle()
+            assertEquals("exercise-fractions-1", viewModel.uiState.value.activeExerciseId)
+            assertEquals(ActiveExercisePhase.RetryReady, viewModel.uiState.value.activeExercisePhase)
+        }
+
+        assertEquals(0, viewModel.uiState.value.remainingLives)
+        viewModel.selectMultipleChoiceAnswer("one-quarter")
+        viewModel.submitAnswer()
+        advanceUntilIdle()
+
+        assertEquals(4, userRepository.attemptCalls.size)
+        assertEquals("Exercise completed. Keep going.", viewModel.uiState.value.exerciseFeedbackMessage)
+        assertEquals(LessonNodeState.Completed, viewModel.uiState.value.nodes.first().state)
+    }
+
+    @Test
+    fun `input value submission is trimmed before the attempt`() = runTest(dispatcher) {
+        val initialProgress = testProgress(completedExerciseIds = setOf("exercise-fractions-1"))
+        val userRepository = FakeLessonMapUserRepository(
+            progress = initialProgress,
+            attemptResponses = listOf(
+                ExerciseAttemptResponse(
+                    exerciseId = "exercise-fractions-2",
+                    lessonId = "lesson-map-fractions",
+                    isCorrect = true,
+                    progress = testProgress(
+                        completedExerciseIds = setOf("exercise-fractions-1", "exercise-fractions-2")
+                    )
+                )
+            )
+        )
+        val viewModel = lessonMapViewModel(userRepository)
+
+        advanceUntilIdle()
+        viewModel.selectExercise("exercise-fractions-2")
+        viewModel.updateInputValueAnswer(" 1/2 ")
+        viewModel.submitAnswer()
+        advanceUntilIdle()
+
+        assertEquals(listOf<ExerciseSubmission>(InputValueSubmission("1/2")), userRepository.attemptCalls)
+    }
+
+    @Test
+    fun `multi select submits the partial set then the exact changed set on retry`() = runTest(dispatcher) {
+        val initialProgress = testProgress(
+            completedExerciseIds = setOf("exercise-fractions-1", "exercise-fractions-2")
+        )
+        val userRepository = FakeLessonMapUserRepository(
+            progress = initialProgress,
+            attemptResponses = listOf(
+                ExerciseAttemptResponse(
+                    exerciseId = "exercise-fractions-3",
+                    lessonId = "lesson-map-fractions",
+                    isCorrect = false,
+                    progress = initialProgress
+                ),
+                ExerciseAttemptResponse(
+                    exerciseId = "exercise-fractions-3",
+                    lessonId = "lesson-map-fractions",
+                    isCorrect = true,
+                    progress = testProgress(
+                        completedExerciseIds = setOf(
+                            "exercise-fractions-1",
+                            "exercise-fractions-2",
+                            "exercise-fractions-3"
+                        )
+                    )
+                )
+            )
+        )
+        val viewModel = lessonMapViewModel(userRepository)
+
+        advanceUntilIdle()
+        viewModel.selectExercise("exercise-fractions-3")
+        viewModel.toggleMultiSelectAnswer("one-half")
+        viewModel.submitAnswer()
+        advanceUntilIdle()
+        viewModel.toggleMultiSelectAnswer("two-fourths")
+        viewModel.submitAnswer()
+        advanceUntilIdle()
+
+        assertEquals(
+            listOf<ExerciseSubmission>(
+                MultiSelectSubmission(listOf("one-half")),
+                MultiSelectSubmission(listOf("one-half", "two-fourths"))
+            ),
+            userRepository.attemptCalls
+        )
+        assertEquals("Exercise completed. Keep going.", viewModel.uiState.value.exerciseFeedbackMessage)
+    }
+
+    @Test
     fun `blank input answer is rejected client side`() = runTest(dispatcher) {
         val userRepository = FakeLessonMapUserRepository(progress = testProgress(completedExerciseIds = setOf("exercise-fractions-1")))
         val viewModel = LessonMapViewModel(
@@ -228,6 +362,13 @@ class LessonMapViewModelTest {
         assertEquals("Enter an answer before submitting.", viewModel.uiState.value.exerciseFeedbackMessage)
         assertEquals(ActiveExercisePhase.Drafting, viewModel.uiState.value.activeExercisePhase)
     }
+
+    private fun lessonMapViewModel(userRepository: UserRepository) = LessonMapViewModel(
+        authRepository = FakeLessonMapAuthRepository(testUser),
+        userRepository = userRepository,
+        lessonRepository = FakeLessonRepository(),
+        exerciseRepository = FakeExerciseRepository()
+    )
 
     @Test
     fun `refresh restores current user when session user is missing`() = runTest(dispatcher) {

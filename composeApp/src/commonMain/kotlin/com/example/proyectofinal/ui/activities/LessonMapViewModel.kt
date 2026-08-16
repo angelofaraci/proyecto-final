@@ -71,6 +71,7 @@ class LessonMapViewModel(
                 activeExerciseId = exerciseId,
                 activeExerciseDraft = createDraft(node.exercise.payload),
                 activeExercisePhase = ActiveExercisePhase.Drafting,
+                remainingLives = 3,
                 exerciseFeedback = null,
                 nodes = buildLessonMapNodes(
                     exercises = lessonMap.exercises,
@@ -87,6 +88,7 @@ class LessonMapViewModel(
                 activeExerciseId = null,
                 activeExerciseDraft = null,
                 activeExercisePhase = ActiveExercisePhase.Drafting,
+                remainingLives = 3,
                 exerciseFeedback = null
             )
         }
@@ -169,6 +171,7 @@ class LessonMapViewModel(
                 _uiState.update {
                     it.copy(
                         activeExercisePhase = ActiveExercisePhase.RetryReady,
+                        remainingLives = (it.remainingLives - 1).coerceAtLeast(0),
                         exerciseFeedback = ExerciseFeedbackUiState(
                             message = attempt.message ?: "Incorrect answer. Try again.",
                             tone = ExerciseFeedbackTone.Error
@@ -203,6 +206,17 @@ class LessonMapViewModel(
     fun openTheory() {
         val lesson = _uiState.value.lessonMap?.lesson ?: return
         _uiState.update { it.copy(selectedTheoryLesson = lesson) }
+    }
+
+    fun showHint() {
+        _uiState.update {
+            it.copy(
+                exerciseFeedback = ExerciseFeedbackUiState(
+                    message = "Hint requested.",
+                    tone = ExerciseFeedbackTone.Info
+                )
+            )
+        }
     }
 
     fun dismissTheory() {

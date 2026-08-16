@@ -1,6 +1,7 @@
 package com.example.proyectofinal.ui.activities
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -15,32 +16,37 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.proyectofinal.models.ChoiceOption
@@ -55,7 +61,10 @@ import com.example.proyectofinal.ui.primitives.MCard
 import com.example.proyectofinal.ui.primitives.MLinearProgressIndicator
 import com.example.proyectofinal.ui.primitives.MProgressIndicator
 import com.example.proyectofinal.ui.primitives.MTextField
+import com.example.proyectofinal.ui.PlaceholderScreen
+import com.example.proyectofinal.ui.PlaceholderState
 import com.example.proyectofinal.ui.theme.AppThemeDefaults
+import com.example.proyectofinal.ui.theme.BrandCoralShadow
 import com.example.proyectofinal.ui.theme.BrandLock
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -64,6 +73,7 @@ import proyectofinal.composeapp.generated.resources.Res
 import proyectofinal.composeapp.generated.resources.ic_arrow_left
 import proyectofinal.composeapp.generated.resources.lesson_map_action_back_to_map
 import proyectofinal.composeapp.generated.resources.lesson_map_action_checking_answer
+import proyectofinal.composeapp.generated.resources.lesson_map_action_hint
 import proyectofinal.composeapp.generated.resources.lesson_map_action_go_home
 import proyectofinal.composeapp.generated.resources.lesson_map_action_retry
 import proyectofinal.composeapp.generated.resources.lesson_map_action_submit_answer
@@ -71,16 +81,17 @@ import proyectofinal.composeapp.generated.resources.lesson_map_action_try_again
 import proyectofinal.composeapp.generated.resources.lesson_map_action_view_theory
 import proyectofinal.composeapp.generated.resources.lesson_map_answer_label
 import proyectofinal.composeapp.generated.resources.lesson_map_back_content_description
-import proyectofinal.composeapp.generated.resources.lesson_map_exercise_numbered
-import proyectofinal.composeapp.generated.resources.lesson_map_exercise_unnumbered
+import proyectofinal.composeapp.generated.resources.lesson_map_close_exercise_content_description
 import proyectofinal.composeapp.generated.resources.lesson_map_exercise_unsupported
 import proyectofinal.composeapp.generated.resources.lesson_map_header_lessons_count
 import proyectofinal.composeapp.generated.resources.lesson_map_progress_lessons
 import proyectofinal.composeapp.generated.resources.lesson_map_progress_percent
+import proyectofinal.composeapp.generated.resources.lesson_map_question_counter
 
 @Composable
 fun LessonMapScreen(
     onShowHome: () -> Unit = {},
+    onExercisePlayerActiveChanged: (Boolean) -> Unit = {},
     viewModel: LessonMapViewModel = koinViewModel<LessonMapViewModel>()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -96,7 +107,9 @@ fun LessonMapScreen(
         onMultiSelectAnswerToggled = viewModel::toggleMultiSelectAnswer,
         onSubmitAnswer = viewModel::submitAnswer,
         onOpenTheory = viewModel::openTheory,
-        onDismissTheory = viewModel::dismissTheory
+        onDismissTheory = viewModel::dismissTheory,
+        onHintRequested = viewModel::showHint,
+        onExercisePlayerActiveChanged = onExercisePlayerActiveChanged
     )
 }
 
@@ -113,12 +126,19 @@ internal fun LessonMapContent(
     onSubmitAnswer: () -> Unit,
     onOpenTheory: () -> Unit,
     onDismissTheory: () -> Unit,
+    onHintRequested: () -> Unit = {},
+    onExercisePlayerActiveChanged: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    LaunchedEffect(uiState.activeExerciseId) {
+        onExercisePlayerActiveChanged(uiState.activeExerciseId != null)
+    }
     when {
-        uiState.isLoading -> Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            MProgressIndicator()
-        }
+        uiState.isLoading -> PlaceholderScreen(
+            title = "Cargando actividad",
+            state = PlaceholderState.Loading,
+            modifier = modifier
+        )
 
         uiState.errorMessage != null -> Box(
             modifier = modifier
@@ -153,7 +173,10 @@ internal fun LessonMapContent(
             if (activeExercise != null) {
                 ExercisePlayerContent(
                     exercise = activeExercise,
+                    lessonTitle = lessonMap.lesson.title,
                     exerciseNumber = uiState.activeNode?.index,
+                    exerciseCount = uiState.nodes.size,
+                    remainingLives = uiState.remainingLives,
                     draft = uiState.activeExerciseDraft,
                     phase = uiState.activeExercisePhase,
                     feedback = uiState.exerciseFeedback,
@@ -162,6 +185,7 @@ internal fun LessonMapContent(
                     onInputValueChanged = onInputValueChanged,
                     onMultiSelectAnswerToggled = onMultiSelectAnswerToggled,
                     onSubmitAnswer = onSubmitAnswer,
+                    onHintRequested = onHintRequested,
                     modifier = modifier
                 )
             } else {
@@ -222,7 +246,10 @@ internal fun LessonMapContent(
 @Composable
 private fun ExercisePlayerContent(
     exercise: Exercise,
+    lessonTitle: String,
     exerciseNumber: Int?,
+    exerciseCount: Int,
+    remainingLives: Int,
     draft: ExerciseAnswerDraft?,
     phase: ActiveExercisePhase,
     feedback: ExerciseFeedbackUiState?,
@@ -231,66 +258,95 @@ private fun ExercisePlayerContent(
     onInputValueChanged: (String) -> Unit,
     onMultiSelectAnswerToggled: (String) -> Unit,
     onSubmitAnswer: () -> Unit,
+    onHintRequested: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val questionNumber = exerciseNumber ?: 1
+    val questionCount = exerciseCount.coerceAtLeast(1)
+
     Column(
         modifier = modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+            .background(MaterialTheme.colorScheme.background)
     ) {
-        MButton(
-            onClick = onBack,
-            style = MButtonStyle.Outline
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            Text(stringResource(Res.string.lesson_map_action_back_to_map))
-        }
-
-        MCard(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
-        ) {
-            Column(
-                modifier = Modifier.padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+            Spacer(Modifier.height(20.dp))
+            ExercisePlayerHeader(
+                lessonTitle = lessonTitle,
+                questionNumber = questionNumber,
+                questionCount = questionCount,
+                remainingLives = remainingLives,
+                onClose = onBack
+            )
+            MLinearProgressIndicator(
+                progress = { questionNumber.toFloat() / questionCount },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("exerciseProgress")
+            )
+            MCard(
+                modifier = Modifier.fillMaxWidth(),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                shape = RoundedCornerShape(22.dp)
             ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = exercise.title,
+                        modifier = Modifier.testTag("exerciseQuestion"),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+            Text(
+                text = "ELIGE LA RESPUESTA CORRECTA",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            ExerciseAnswerSection(
+                payload = exercise.payload,
+                draft = draft,
+                onMultipleChoiceAnswerSelected = onMultipleChoiceAnswerSelected,
+                onInputValueChanged = onInputValueChanged,
+                onMultiSelectAnswerToggled = onMultiSelectAnswerToggled
+            )
+            Text(
+                text = "💡 ${stringResource(Res.string.lesson_map_action_hint)}",
+                modifier = Modifier
+                    .testTag("exerciseHint")
+                    .clickable(onClick = onHintRequested),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+            feedback?.let {
                 Text(
-                    text = exerciseNumber?.let {
-                        stringResource(Res.string.lesson_map_exercise_numbered, it)
-                    } ?: stringResource(Res.string.lesson_map_exercise_unnumbered),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-                Text(
-                    text = exercise.title,
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                    text = it.message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = feedbackColor(it.tone)
                 )
             }
+            Spacer(Modifier.height(4.dp))
         }
-
-        ExerciseAnswerSection(
-            payload = exercise.payload,
-            draft = draft,
-            onMultipleChoiceAnswerSelected = onMultipleChoiceAnswerSelected,
-            onInputValueChanged = onInputValueChanged,
-            onMultiSelectAnswerToggled = onMultiSelectAnswerToggled
-        )
-
-        feedback?.let {
-            Text(
-                text = it.message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = feedbackColor(it.tone)
-            )
-        }
-
         MButton(
             onClick = onSubmitAnswer,
-            modifier = Modifier.fillMaxWidth(),
-            enabled = canSubmitDraft(draft) && phase != ActiveExercisePhase.Submitting
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 16.dp)
+                .testTag("exerciseConfirmButton"),
+            enabled = canSubmitDraft(draft) && phase != ActiveExercisePhase.Submitting,
+            shape = RoundedCornerShape(18.dp)
         ) {
             Text(
                 when (phase) {
@@ -299,6 +355,49 @@ private fun ExercisePlayerContent(
                     ActiveExercisePhase.Drafting -> stringResource(Res.string.lesson_map_action_submit_answer)
                 }
             )
+        }
+    }
+}
+
+@Composable
+private fun ExercisePlayerHeader(
+    lessonTitle: String,
+    questionNumber: Int,
+    questionCount: Int,
+    remainingLives: Int,
+    onClose: () -> Unit
+) {
+    val closeContentDescription = stringResource(Res.string.lesson_map_close_exercise_content_description)
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(38.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .semantics { contentDescription = closeContentDescription }
+                .clickable(onClick = onClose),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("×", style = MaterialTheme.typography.titleLarge)
+        }
+        Text(
+            text = "$lessonTitle\n${stringResource(Res.string.lesson_map_question_counter, questionNumber, questionCount)}",
+            modifier = Modifier.weight(1f),
+            textAlign = TextAlign.Center,
+            style = MaterialTheme.typography.titleLarge
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+            repeat(remainingLives.coerceIn(0, 3)) {
+                Text(
+                    text = "♥",
+                    modifier = Modifier.testTag("exerciseHeart"),
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.titleMedium
+                )
+            }
         }
     }
 }
@@ -313,17 +412,12 @@ private fun ExerciseAnswerSection(
 ) {
     when {
         payload is MultipleChoicePayload && draft is ExerciseAnswerDraft.MultipleChoice -> {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                payload.options.forEach { option ->
+            AnswerGrid(optionCount = payload.options.size) {
+                itemsIndexed(payload.options, key = { _, option -> option.id }) { index, option ->
                     ChoiceOptionCard(
                         option = option,
+                        label = ('A' + index).toString(),
                         isSelected = draft.selectedOptionId == option.id,
-                        selectionControl = {
-                            RadioButton(
-                                selected = draft.selectedOptionId == option.id,
-                                onClick = { onMultipleChoiceAnswerSelected(option.id) }
-                            )
-                        },
                         onClick = { onMultipleChoiceAnswerSelected(option.id) }
                     )
                 }
@@ -334,6 +428,7 @@ private fun ExerciseAnswerSection(
             MTextField(
                 value = draft.value,
                 onValueChange = onInputValueChanged,
+                modifier = Modifier.testTag("exerciseInputValue"),
                 singleLine = true,
                 label = { Text(stringResource(Res.string.lesson_map_answer_label)) },
                 placeholder = payload.placeholder?.let { placeholder -> { Text(placeholder) } }
@@ -341,17 +436,12 @@ private fun ExerciseAnswerSection(
         }
 
         payload is MultiSelectPayload && draft is ExerciseAnswerDraft.MultiSelect -> {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                payload.options.forEach { option ->
+            AnswerGrid(optionCount = payload.options.size) {
+                itemsIndexed(payload.options, key = { _, option -> option.id }) { index, option ->
                     ChoiceOptionCard(
                         option = option,
+                        label = ('A' + index).toString(),
                         isSelected = option.id in draft.selectedOptionIds,
-                        selectionControl = {
-                            Checkbox(
-                                checked = option.id in draft.selectedOptionIds,
-                                onCheckedChange = { onMultiSelectAnswerToggled(option.id) }
-                            )
-                        },
                         onClick = { onMultiSelectAnswerToggled(option.id) }
                     )
                 }
@@ -375,16 +465,47 @@ private fun ExerciseAnswerSection(
 }
 
 @Composable
+private fun AnswerGrid(
+    optionCount: Int,
+    content: androidx.compose.foundation.lazy.grid.LazyGridScope.() -> Unit
+) {
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(((optionCount + 1) / 2 * 96).dp)
+            .testTag("exerciseAnswerGrid"),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        userScrollEnabled = false,
+        content = content
+    )
+}
+
+@Composable
 private fun ChoiceOptionCard(
     option: ChoiceOption,
+    label: String,
     isSelected: Boolean,
-    selectionControl: @Composable () -> Unit,
     onClick: () -> Unit
 ) {
     MCard(
         modifier = Modifier
             .fillMaxWidth()
+            .shadow(
+                elevation = if (isSelected) 6.dp else 0.dp,
+                shape = RoundedCornerShape(16.dp),
+                ambientColor = BrandCoralShadow,
+                spotColor = BrandCoralShadow
+            )
+            .semantics { selected = isSelected }
+            .testTag("exerciseAnswer-${option.id}")
             .clickable(onClick = onClick),
+        border = BorderStroke(
+            1.dp,
+            if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+        ),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) {
                 MaterialTheme.colorScheme.primaryContainer
@@ -396,37 +517,21 @@ private fun ChoiceOptionCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .testTag("exerciseAnswerCard")
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            selectionControl()
-            Box(
-                modifier = Modifier
-                    .size(28.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                        shape = CircleShape
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = optionLabel(option.text),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
             Text(
-                text = option.text,
+                text = "$label: ${option.text}",
                 modifier = Modifier.weight(1f),
-                style = MaterialTheme.typography.bodyLarge
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
             )
         }
     }
 }
-
-private fun optionLabel(option: String): String = option.firstOrNull()?.uppercase() ?: "?"
 
 private fun canSubmitDraft(draft: ExerciseAnswerDraft?): Boolean = when (draft) {
     is ExerciseAnswerDraft.MultipleChoice -> draft.selectedOptionId != null
@@ -478,10 +583,12 @@ private fun LessonMapHeader(
                 modifier = Modifier.size(20.dp)
             )
         }
-        Spacer(Modifier.size(12.dp))
+        Spacer(Modifier.size(8.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
+                maxLines = 1,
+                overflow = TextOverflow.Clip,
                 style = MaterialTheme.typography.headlineSmall
             )
             Text(
@@ -501,8 +608,8 @@ private fun LessonMapHeader(
         ) {
             Text(
                 text = stringResource(Res.string.lesson_map_action_view_theory),
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                style = MaterialTheme.typography.labelMedium,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
+                style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onPrimary
             )
@@ -578,7 +685,7 @@ private fun LessonMapPath(
             for (i in 0 until nodes.lastIndex) {
                 val from = nodes[i]
                 val to = nodes[i + 1]
-                val dashed = to.state == LessonNodeState.Locked
+                val dashed = isDashedLessonPathSegment(to.state)
                 val color = when {
                     dashed -> BrandLock
                     from.state == LessonNodeState.Completed -> completedColor
@@ -612,3 +719,6 @@ private fun LessonMapPath(
         }
     }
 }
+
+internal fun isDashedLessonPathSegment(destination: LessonNodeState): Boolean =
+    destination == LessonNodeState.Locked

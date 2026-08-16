@@ -17,6 +17,8 @@ import com.example.proyectofinal.models.MultipleChoicePayload
 import com.example.proyectofinal.ui.theme.AppTheme
 import org.junit.Rule
 import org.junit.Test
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 /**
  * Render coverage for the `ui-redesign-sync` lesson-map slice (mapa-leccion.png). Asserts the
@@ -122,6 +124,24 @@ class LessonMapRedesignRenderTest {
 
         composeTestRule.onNodeWithTag("lessonMapNode-3").performClick()
         assert(selectedExerciseId == "ex-3")
+    }
+
+    @Test
+    fun `tapping the current node selects its exercise`() {
+        var selectedExerciseId: String? = null
+        val nodes = buildLessonMapNodes(sampleExercises(3), completedExerciseIds = setOf("ex-1"))
+
+        renderMap(mapUiState(nodes), onExerciseSelected = { selectedExerciseId = it })
+        composeTestRule.onNodeWithTag("lessonMapNode-2").performClick()
+
+        assert(selectedExerciseId == "ex-2")
+    }
+
+    @Test
+    fun `path segments into locked nodes are dashed`() {
+        assertTrue(isDashedLessonPathSegment(LessonNodeState.Locked))
+        assertFalse(isDashedLessonPathSegment(LessonNodeState.Current))
+        assertFalse(isDashedLessonPathSegment(LessonNodeState.Completed))
     }
 
     @Test
