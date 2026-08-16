@@ -12,6 +12,7 @@ import com.example.proyectofinal.database.Users
 import com.example.proyectofinal.database.UserProgress as UserProgressTable
 import com.example.proyectofinal.models.ChoiceOption
 import com.example.proyectofinal.models.ExerciseAttemptRequest
+import com.example.proyectofinal.models.Exercise
 import com.example.proyectofinal.models.CreateCourseRequest
 import com.example.proyectofinal.models.CreateExerciseRequest
 import com.example.proyectofinal.models.CreateLessonRequest
@@ -53,6 +54,7 @@ import java.util.UUID
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
@@ -310,8 +312,38 @@ class LessonExerciseServiceTest {
         insertCourse(id = "teacher-course", creatorId = "teacher-owner")
         insertLesson(id = "official-lesson", courseId = "official-course", theoryContent = "Official theory")
         insertLesson(id = "teacher-lesson", courseId = "teacher-course", theoryContent = "Teacher theory")
-        insertExercise(id = "exercise-teacher", lessonId = "teacher-lesson", correctAnswer = "4")
+        insertExercise(
+            id = "exercise-teacher",
+            lessonId = "teacher-lesson",
+            options = "3,4",
+            correctAnswer = "4"
+        )
         enrollUser(userId = "learner-enrolled", courseId = "teacher-course")
+        val exerciseService = ExerciseService()
+        exerciseService.createExercise(
+            CreateExerciseRequest(
+                id = "exercise-input",
+                lessonId = "teacher-lesson",
+                title = "Enter 42",
+                type = ExerciseType.INPUT_VALUE,
+                payload = InputValuePayload(correctValue = "42")
+            )
+        )
+        exerciseService.createExercise(
+            CreateExerciseRequest(
+                id = "exercise-multi",
+                lessonId = "teacher-lesson",
+                title = "Choose A and C",
+                type = ExerciseType.MULTI_SELECT,
+                payload = MultiSelectPayload(
+                    options = listOf(
+                        ChoiceOption(id = "A", text = "A"),
+                        ChoiceOption(id = "C", text = "C")
+                    ),
+                    correctOptionIds = listOf("A", "C")
+                )
+            )
+        )
 
         val service = LessonService()
 
@@ -321,12 +353,10 @@ class LessonExerciseServiceTest {
                 service.getLessonByIdForUser("teacher-lesson", "teacher-owner", UserRole.TEACHER)
             ).lesson.id
         )
-        assertEquals(
-            "teacher-lesson",
-            assertIs<LessonReadResult.Success>(
-                service.getLessonByIdForUser("teacher-lesson", "admin-1", UserRole.ADMIN)
-            ).lesson.id
-        )
+        val adminLesson = assertIs<LessonReadResult.Success>(
+            service.getLessonByIdForUser("teacher-lesson", "admin-1", UserRole.ADMIN)
+        ).lesson
+        assertEquals("teacher-lesson", adminLesson.id)
         assertEquals(
             "official-lesson",
             assertIs<LessonReadResult.Success>(
@@ -349,7 +379,20 @@ class LessonExerciseServiceTest {
         val enrolledLesson = assertIs<LessonReadResult.Success>(
             service.getLessonByIdForUser("teacher-lesson", "learner-enrolled", UserRole.STUDENT)
         ).lesson
-        assertEquals("", enrolledLesson.exercises.single().correctAnswer)
+        val studentExercises = enrolledLesson.exercises.associateBy { it.id }
+        val adminExercises = adminLesson.exercises.associateBy { it.id }
+        assertNull(assertIs<MultipleChoicePayload>(studentExercises.getValue("exercise-teacher").payload).correctOptionId)
+        assertNull(assertIs<InputValuePayload>(studentExercises.getValue("exercise-input").payload).correctValue)
+        assertNull(assertIs<MultiSelectPayload>(studentExercises.getValue("exercise-multi").payload).correctOptionIds)
+        assertEquals(
+            "4",
+            assertIs<MultipleChoicePayload>(adminExercises.getValue("exercise-teacher").payload).correctOptionId
+        )
+        assertEquals("42", assertIs<InputValuePayload>(adminExercises.getValue("exercise-input").payload).correctValue)
+        assertEquals(
+            listOf("A", "C"),
+            assertIs<MultiSelectPayload>(adminExercises.getValue("exercise-multi").payload).correctOptionIds
+        )
 
         assertEquals(
             LessonReadResult.Forbidden,
@@ -614,6 +657,55 @@ class LessonExerciseServiceTest {
 
         assertTrue(service.deleteExercise("exercise-1"))
         assertTrue(service.getExercisesByLessonId("lesson-1", hideAnswers = false).isEmpty())
+    }
+
+    @Test
+    fun `exercise attempt validation handles every typed submission contract`() {
+        val options = listOf(
+            ChoiceOption(id = "A", text = "A"),
+            ChoiceOption(id = "B", text = "B"),
+            ChoiceOption(id = "C", text = "C")
+        )
+        val multipleChoice = Exercise(
+            id = "choice",
+            lessonId = "lesson-1",
+            title = "Choose B",
+            payload = MultipleChoicePayload(options = options, correctOptionId = "B")
+        )
+        val inputValue = Exercise(
+            id = "input",
+            lessonId = "lesson-1",
+            title = "Enter 42",
+            payload = InputValuePayload(correctValue = "42")
+        )
+        val multiSelect = Exercise(
+            id = "multi",
+            lessonId = "lesson-1",
+            title = "Choose A and C",
+            payload = MultiSelectPayload(options = options, correctOptionIds = listOf("A", "C"))
+        )
+
+        assertTrue(
+            ExercisePayloadSupport.evaluateAttempt(
+                multipleChoice,
+                MultipleChoiceSubmission("B")
+            ).isCorrect
+        )
+        assertTrue(
+            ExercisePayloadSupport.evaluateAttempt(inputValue, InputValueSubmission(" 42 ")).isCorrect
+        )
+        assertTrue(
+            ExercisePayloadSupport.evaluateAttempt(
+                multiSelect,
+                MultiSelectSubmission(listOf("C", "A"))
+            ).isCorrect
+        )
+        assertFalse(
+            ExercisePayloadSupport.evaluateAttempt(
+                multiSelect,
+                MultiSelectSubmission(listOf("A"))
+            ).isCorrect
+        )
     }
 
     @Test
