@@ -1,8 +1,8 @@
 # Archive Report: UI Redesign Sync
 
-**Change**: `ui-redesign-sync`  
-**Archived**: 2026-08-16  
-**Status**: Complete  
+**Change**: `ui-redesign-sync`
+**Archived**: 2026-08-16
+**Status**: Complete
 **Artifact store**: OpenSpec
 
 ## Final State
