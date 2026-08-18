@@ -100,7 +100,11 @@ object ProvinceSchoolCatalog {
     }
 
     fun schoolYearOptionsFor(province: String, track: StudentTrack): List<SchoolYearOption> =
-        schoolYearOptionsFor(province).filter { option -> track in option.allowedTracks }
+        schoolYearOptionsFor(province)
+            .filter { option -> track in option.allowedTracks }
+            .mapIndexed { index, option ->
+                option.copy(label = ordinalSchoolYearLabel(index + 1))
+            }
 
     fun allowedTracksFor(province: String, schoolYear: Int): Set<StudentTrack> =
         schoolYearOptionsFor(province)
@@ -110,4 +114,15 @@ object ProvinceSchoolCatalog {
 
     fun isValidSelection(province: String, schoolYear: Int, studentTrack: StudentTrack): Boolean =
         studentTrack in allowedTracksFor(province, schoolYear)
+
+    private fun ordinalSchoolYearLabel(year: Int): String =
+        when (year) {
+            1 -> "1er Año"
+            2 -> "2do Año"
+            3 -> "3er Año"
+            4 -> "4to Año"
+            5 -> "5to Año"
+            6 -> "6to Año"
+            else -> "$year° Año"
+        }
 }

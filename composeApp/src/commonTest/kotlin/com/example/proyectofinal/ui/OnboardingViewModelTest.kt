@@ -118,6 +118,42 @@ class OnboardingViewModelTest {
     }
 
     @Test
+    fun `secondary year labels are relative to each province structure without changing persisted years`() = runTest(dispatcher) {
+        val viewModel = OnboardingViewModel(OnboardingFakeAuthRepository(testUser), FakeLearnerProfileRepository())
+
+        viewModel.selectProvince("Entre Ríos")
+        viewModel.selectTrack(StudentTrack.SECONDARY)
+
+        assertEquals((7..12).toList(), viewModel.uiState.value.availableSchoolYears.map { it.schoolYear })
+        assertEquals(
+            listOf("1er Año", "2do Año", "3er Año", "4to Año", "5to Año", "6to Año"),
+            viewModel.uiState.value.availableSchoolYears.map { it.label }
+        )
+
+        viewModel.selectProvince("CABA")
+        viewModel.selectTrack(StudentTrack.SECONDARY)
+
+        assertEquals((8..12).toList(), viewModel.uiState.value.availableSchoolYears.map { it.schoolYear })
+        assertEquals(
+            listOf("1er Año", "2do Año", "3er Año", "4to Año", "5to Año"),
+            viewModel.uiState.value.availableSchoolYears.map { it.label }
+        )
+
+        viewModel.selectProvince("Buenos Aires")
+        viewModel.selectTrack(StudentTrack.TECHNICAL_SECONDARY)
+
+        assertEquals(
+            listOf("1er Año", "2do Año", "3er Año", "4to Año", "5to Año", "6to Año", "7° Año"),
+            viewModel.uiState.value.availableSchoolYears.map { it.label }
+        )
+
+        viewModel.selectTrack(StudentTrack.SELF_DIRECTED)
+
+        assertEquals("12° Año", viewModel.uiState.value.availableSchoolYears.last().label)
+        assertEquals(12, viewModel.uiState.value.availableSchoolYears.last().schoolYear)
+    }
+
+    @Test
     fun `completing onboarding persists the selected learner profile`() = runTest(dispatcher) {
         val repository = FakeLearnerProfileRepository()
         val viewModel = OnboardingViewModel(OnboardingFakeAuthRepository(testUser), repository)
