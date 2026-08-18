@@ -15,6 +15,8 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.core.eq
 
 object SeedData {
+    const val DEMO_COURSE_ID = "course-demo-qa"
+
     private data class AdminSeedConfig(
         val id: String,
         val name: String,
@@ -295,7 +297,7 @@ object SeedData {
     }
 
     private fun seedDemoCourse(adminId: String) {
-        val demoCourseId = "course-demo-qa"
+        val demoCourseId = DEMO_COURSE_ID
         ensureCourse(demoCourseId) {
             it[Courses.id] = demoCourseId
             it[Courses.title] = "Demo QA Course"

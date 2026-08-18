@@ -1,11 +1,14 @@
 package com.example.proyectofinal.service
 
 import at.favre.lib.crypto.bcrypt.BCrypt
+import com.example.proyectofinal.database.Courses
+import com.example.proyectofinal.database.EnrolledCourses
 import com.example.proyectofinal.database.Users
 import com.example.proyectofinal.database.dbQuery
 import com.example.proyectofinal.models.RegisterRequest
 import com.example.proyectofinal.models.User
 import com.example.proyectofinal.models.UserRole
+import com.example.proyectofinal.seed.SeedData
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -25,6 +28,16 @@ class AuthService {
             it[Users.email] = request.email
             it[Users.passwordHash] = passwordHash
             it[Users.role] = UserRole.STUDENT.name
+        }
+
+        val demoCourseExists = !Courses.selectAll()
+            .where { Courses.id eq SeedData.DEMO_COURSE_ID }
+            .empty()
+        if (demoCourseExists) {
+            EnrolledCourses.insert {
+                it[EnrolledCourses.userId] = userId
+                it[EnrolledCourses.courseId] = SeedData.DEMO_COURSE_ID
+            }
         }
 
         User(
