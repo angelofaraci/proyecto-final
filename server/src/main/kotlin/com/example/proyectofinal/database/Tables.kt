@@ -12,6 +12,16 @@ object Users : Table("users") {
     override val primaryKey = PrimaryKey(id)
 }
 
+object UserProfilePreferences : Table("user_profile_preferences") {
+    val userId = reference("user_id", Users.id, onDelete = ReferenceOption.CASCADE)
+    val notificationsEnabled = bool("notifications_enabled").default(true)
+    val soundsEnabled = bool("sounds_enabled").default(true)
+    val language = varchar("language", 10).nullable()
+    val avatarId = varchar("avatar_id", 50).nullable()
+
+    override val primaryKey = PrimaryKey(userId)
+}
+
 object Courses : Table("courses") {
     val id = varchar("id", 50)
     val title = varchar("title", 200)
