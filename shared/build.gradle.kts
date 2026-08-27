@@ -33,6 +33,10 @@ kotlin {
         commonMain.dependencies {
             api(libs.kotlinx.serialization.core)
         }
+        commonTest.dependencies {
+            implementation(libs.kotlin.test)
+            implementation(libs.kotlinx.serialization.json)
+        }
     }
 
     jvmToolchain(17)
