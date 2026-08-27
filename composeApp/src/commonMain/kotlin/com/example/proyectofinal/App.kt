@@ -16,6 +16,8 @@ import androidx.compose.ui.Modifier
 import com.example.proyectofinal.domain.AuthRepository
 import com.example.proyectofinal.domain.LearnerProfileRepository
 import com.example.proyectofinal.ui.primitives.MProgressIndicator
+import com.example.proyectofinal.ui.localization.AppLocaleController
+import com.example.proyectofinal.ui.localization.AppLocaleHost
 import com.example.proyectofinal.ui.theme.AppTheme
 import com.example.proyectofinal.ui.AuthGateViewModel
 import com.example.proyectofinal.ui.AuthView
@@ -37,12 +39,15 @@ import org.koin.core.parameter.parametersOf
 
 @Composable
 fun App() {
-    AppTheme {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background
-        ) {
-            AuthGate()
+    val localeController = remember { AppLocaleController() }
+    AppLocaleHost(localeController) {
+        AppTheme {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.background
+            ) {
+                AuthGate()
+            }
         }
     }
 }
