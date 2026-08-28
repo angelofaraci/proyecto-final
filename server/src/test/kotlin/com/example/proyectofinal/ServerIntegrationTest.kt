@@ -12,6 +12,7 @@ import com.example.proyectofinal.database.Exercises
 import com.example.proyectofinal.database.Lessons
 import com.example.proyectofinal.database.Users
 import com.example.proyectofinal.database.UserProgress as UserProgressTable
+import com.example.proyectofinal.database.UserProfilePreferences
 import com.example.proyectofinal.models.AuthResponse
 import com.example.proyectofinal.models.ChoiceOption
 import com.example.proyectofinal.models.CompleteLessonRequest
@@ -24,11 +25,16 @@ import com.example.proyectofinal.models.CreateLessonRequest
 import com.example.proyectofinal.models.Exercise
 import com.example.proyectofinal.models.ExerciseType
 import com.example.proyectofinal.models.InputValueSubmission
+import com.example.proyectofinal.models.LoginRequest
 import com.example.proyectofinal.models.Lesson
 import com.example.proyectofinal.models.MultiSelectSubmission
 import com.example.proyectofinal.models.MultipleChoicePayload
 import com.example.proyectofinal.models.MultipleChoiceSubmission
 import com.example.proyectofinal.models.RegisterRequest
+import com.example.proyectofinal.models.ChangePasswordRequest
+import com.example.proyectofinal.models.ProfileError
+import com.example.proyectofinal.models.ProfileErrorCode
+import com.example.proyectofinal.models.UpdateIdentityRequest
 import com.example.proyectofinal.models.TheoryUpdateRequest
 import com.example.proyectofinal.models.UpdateExerciseRequest
 import com.example.proyectofinal.models.UpdateLessonRequest
@@ -45,6 +51,7 @@ import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
@@ -160,7 +167,102 @@ class ServerIntegrationTest {
             val savedUser = Users.selectAll().where { Users.email eq "test@example.com" }.single()
             assertEquals("Test User", savedUser[Users.name])
             assertEquals("STUDENT", savedUser[Users.role])
+            val preferences = UserProfilePreferences.selectAll()
+                .where { UserProfilePreferences.userId eq auth.user.id }
+                .single()
+            assertTrue(preferences[UserProfilePreferences.notificationsEnabled])
+            assertTrue(preferences[UserProfilePreferences.soundsEnabled])
+            assertEquals(null, preferences[UserProfilePreferences.language])
+            assertEquals(null, preferences[UserProfilePreferences.avatarId])
         }
+    }
+
+    @Test
+    fun `self service identity uses JWT subject preserves role and returns authoritative account`() = testApplication {
+        setupTestDatabase()
+        application { module(initDatabase = false, seedData = false) }
+        transaction {
+            Users.insert { it[id] = "subject"; it[name] = "Before"; it[email] = "before@example.com"; it[passwordHash] = "hash"; it[role] = "TEACHER" }
+            Users.insert { it[id] = "other"; it[name] = "Other"; it[email] = "other@example.com"; it[passwordHash] = "hash"; it[role] = "STUDENT" }
+        }
+        val response = client.put("/me") {
+            bearerAuth(Security.generateToken("subject", UserRole.TEACHER.name))
+            header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            setBody("""{"name":"Updated","email":"updated@example.com","id":"other","role":"ADMIN"}""")
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        val updated = Json { ignoreUnknownKeys = true }.decodeFromString<User>(response.bodyAsText())
+        assertEquals(User("subject", "Updated", "updated@example.com", UserRole.TEACHER), updated)
+        transaction {
+            assertEquals("Other", Users.selectAll().where { Users.id eq "other" }.single()[Users.name])
+            assertEquals("TEACHER", Users.selectAll().where { Users.id eq "subject" }.single()[Users.role])
+        }
+    }
+
+    @Test
+    fun `self service identity rejects invalid and duplicate values without mutation`() = testApplication {
+        setupTestDatabase()
+        application { module(initDatabase = false, seedData = false) }
+        transaction {
+            Users.insert { it[id] = "subject"; it[name] = "Before"; it[email] = "before@example.com"; it[passwordHash] = "hash"; it[role] = "STUDENT" }
+            Users.insert { it[id] = "other"; it[name] = "Other"; it[email] = "used@example.com"; it[passwordHash] = "hash"; it[role] = "STUDENT" }
+        }
+        val token = Security.generateToken("subject", UserRole.STUDENT.name)
+        val api = createClient { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }
+        suspend fun update(request: UpdateIdentityRequest) = api.put("/me") {
+            bearerAuth(token); header(HttpHeaders.ContentType, ContentType.Application.Json.toString()); setBody(request)
+        }
+
+        assertEquals(HttpStatusCode.BadRequest, update(UpdateIdentityRequest(" ", "valid@example.com")).status)
+        assertEquals(HttpStatusCode.BadRequest, update(UpdateIdentityRequest("Valid", "invalid-email")).status)
+        val duplicate = update(UpdateIdentityRequest("Valid", "used@example.com"))
+        assertEquals(HttpStatusCode.Conflict, duplicate.status)
+        assertEquals(ProfileErrorCode.EMAIL_CONFLICT, duplicate.body<ProfileError>().code)
+        transaction {
+            val unchanged = Users.selectAll().where { Users.id eq "subject" }.single()
+            assertEquals("Before", unchanged[Users.name])
+            assertEquals("before@example.com", unchanged[Users.email])
+        }
+    }
+
+    @Test
+    fun `password change verifies current password replaces bcrypt hash and changes login credentials`() = testApplication {
+        setupTestDatabase()
+        application { module(initDatabase = false, seedData = false) }
+        val oldPassword = "OldPassword123!"
+        val newPassword = "NewPassword456!"
+        transaction {
+            Users.insert {
+                it[id] = "subject"; it[name] = "Subject"; it[email] = "subject@example.com"
+                it[passwordHash] = BCrypt.withDefaults().hashToString(12, oldPassword.toCharArray()); it[role] = "STUDENT"
+            }
+        }
+        val token = Security.generateToken("subject", UserRole.STUDENT.name)
+        val api = createClient { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }
+        suspend fun change(request: ChangePasswordRequest) = api.put("/me/password") {
+            bearerAuth(token); header(HttpHeaders.ContentType, ContentType.Application.Json.toString()); setBody(request)
+        }
+
+        val wrongPassword = change(ChangePasswordRequest("wrong", newPassword))
+        assertEquals(HttpStatusCode.BadRequest, wrongPassword.status)
+        assertEquals(ProfileErrorCode.INVALID_PASSWORD, wrongPassword.body<ProfileError>().code)
+        assertEquals(HttpStatusCode.BadRequest, change(ChangePasswordRequest(oldPassword, "short")).status)
+        assertEquals(HttpStatusCode.BadRequest, change(ChangePasswordRequest("é".repeat(37), newPassword)).status)
+        assertEquals(HttpStatusCode.BadRequest, change(ChangePasswordRequest(oldPassword, "x".repeat(73))).status)
+        assertEquals(HttpStatusCode.NoContent, change(ChangePasswordRequest(oldPassword, newPassword)).status)
+        val storedHash = transaction {
+            Users.selectAll().where { Users.id eq "subject" }.single()[Users.passwordHash]
+        }
+        assertTrue(storedHash != oldPassword && storedHash.startsWith("\$2"))
+        assertTrue(BCrypt.verifyer().verify(newPassword.toCharArray(), storedHash).verified)
+
+        suspend fun login(password: String) = api.post("/auth/login") {
+            header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            setBody(LoginRequest("subject@example.com", password))
+        }
+        assertEquals(HttpStatusCode.Unauthorized, login(oldPassword).status)
+        assertEquals(HttpStatusCode.OK, login(newPassword).status)
     }
 
     @Test

@@ -1,5 +1,6 @@
 package com.example.proyectofinal.service
 
+import at.favre.lib.crypto.bcrypt.BCrypt
 import com.example.proyectofinal.database.CompletedExercises
 import com.example.proyectofinal.database.CompletedLessons
 import com.example.proyectofinal.database.Courses
@@ -15,6 +16,8 @@ import com.example.proyectofinal.models.ExerciseAttemptRequest
 import com.example.proyectofinal.models.ExerciseAttemptResponse
 import com.example.proyectofinal.models.ExerciseCompletionResponse
 import com.example.proyectofinal.models.PageResponse
+import com.example.proyectofinal.models.ChangePasswordRequest
+import com.example.proyectofinal.models.UpdateIdentityRequest
 import com.example.proyectofinal.models.UpdateUserRequest
 import com.example.proyectofinal.models.User
 import com.example.proyectofinal.models.UserProgress
@@ -23,6 +26,7 @@ import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.like
 import org.jetbrains.exposed.v1.core.or
+import org.jetbrains.exposed.v1.exceptions.ExposedSQLException
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -33,6 +37,20 @@ sealed interface ExerciseAttemptResult {
     data class InvalidRequest(val message: String) : ExerciseAttemptResult
     object Forbidden : ExerciseAttemptResult
     object NotFound : ExerciseAttemptResult
+}
+
+sealed interface IdentityUpdateResult {
+    data class Success(val user: User) : IdentityUpdateResult
+    data object InvalidValue : IdentityUpdateResult
+    data object EmailConflict : IdentityUpdateResult
+    data object NotFound : IdentityUpdateResult
+}
+
+sealed interface PasswordChangeResult {
+    data object Success : PasswordChangeResult
+    data object InvalidValue : PasswordChangeResult
+    data object InvalidPassword : PasswordChangeResult
+    data object NotFound : PasswordChangeResult
 }
 
 class UserService {
@@ -94,6 +112,50 @@ class UserService {
         }
 
         return getUserById(id)
+    }
+
+    fun updateIdentity(userId: String, request: UpdateIdentityRequest): IdentityUpdateResult {
+        val name = request.name.trim()
+        val email = request.email.trim()
+        if (name.isEmpty() || name.length > 100 || !EMAIL_PATTERN.matches(email)) {
+            return IdentityUpdateResult.InvalidValue
+        }
+        return try {
+            dbQuery {
+                val updated = Users.update({ Users.id eq userId }) {
+                    it[Users.name] = name
+                    it[Users.email] = email
+                }
+                if (updated == 0) return@dbQuery IdentityUpdateResult.NotFound
+                IdentityUpdateResult.Success(
+                    Users.selectAll().where { Users.id eq userId }.single().toUser()
+                )
+            }
+        } catch (exception: ExposedSQLException) {
+            if (exception.sqlState == UNIQUE_VIOLATION_SQL_STATE) IdentityUpdateResult.EmailConflict
+            else throw exception
+        }
+    }
+
+    fun changePassword(userId: String, request: ChangePasswordRequest): PasswordChangeResult {
+        val currentBytes = request.currentPassword.encodeToByteArray().size
+        val newBytes = request.newPassword.encodeToByteArray().size
+        if (currentBytes !in 1..BCRYPT_MAX_BYTES || request.newPassword.length < 8 || newBytes > BCRYPT_MAX_BYTES) {
+            return PasswordChangeResult.InvalidValue
+        }
+        val currentHash = dbQuery {
+            Users.selectAll().where { Users.id eq userId }.firstOrNull()?.get(Users.passwordHash)
+        } ?: return PasswordChangeResult.NotFound
+        if (!BCrypt.verifyer().verify(request.currentPassword.toCharArray(), currentHash).verified) {
+            return PasswordChangeResult.InvalidPassword
+        }
+        val newHash = BCrypt.withDefaults().hashToString(12, request.newPassword.toCharArray())
+        val updated = dbQuery {
+            Users.update({ (Users.id eq userId) and (Users.passwordHash eq currentHash) }) {
+                it[Users.passwordHash] = newHash
+            }
+        }
+        return if (updated == 1) PasswordChangeResult.Success else PasswordChangeResult.InvalidPassword
     }
 
     fun getUserProgress(userId: String): UserProgress = dbQuery {
@@ -305,4 +367,10 @@ class UserService {
         } else {
             standaloneCreatorId?.let { LessonContentAccess.Standalone(it) }
         }
+
+    private companion object {
+        const val BCRYPT_MAX_BYTES = 72
+        const val UNIQUE_VIOLATION_SQL_STATE = "23505"
+        val EMAIL_PATTERN = Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")
+    }
 }

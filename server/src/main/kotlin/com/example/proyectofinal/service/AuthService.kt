@@ -4,6 +4,7 @@ import at.favre.lib.crypto.bcrypt.BCrypt
 import com.example.proyectofinal.database.Courses
 import com.example.proyectofinal.database.EnrolledCourses
 import com.example.proyectofinal.database.Users
+import com.example.proyectofinal.database.UserProfilePreferences
 import com.example.proyectofinal.database.dbQuery
 import com.example.proyectofinal.models.RegisterRequest
 import com.example.proyectofinal.models.User
@@ -28,6 +29,9 @@ class AuthService {
             it[Users.email] = request.email
             it[Users.passwordHash] = passwordHash
             it[Users.role] = UserRole.STUDENT.name
+        }
+        UserProfilePreferences.insert {
+            it[UserProfilePreferences.userId] = userId
         }
 
         val demoCourseExists = !Courses.selectAll()
