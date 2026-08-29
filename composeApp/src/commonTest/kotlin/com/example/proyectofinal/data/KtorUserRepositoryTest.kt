@@ -7,26 +7,34 @@ import com.example.proyectofinal.db.*
 import com.example.proyectofinal.di.ApiConfig
 import com.example.proyectofinal.di.TokenStore
 import com.example.proyectofinal.di.userRoleColumnAdapter
+import com.example.proyectofinal.domain.AuthRepository
+import com.example.proyectofinal.domain.AuthSession
 import com.example.proyectofinal.models.ExerciseAttemptRequest
 import com.example.proyectofinal.models.ExerciseAttemptResponse
 import com.example.proyectofinal.models.MultipleChoiceSubmission
+import com.example.proyectofinal.models.UpdateIdentityRequest
 import com.example.proyectofinal.models.User
 import com.example.proyectofinal.models.UserProgress
 import com.example.proyectofinal.models.UserRole
 import io.ktor.client.*
 import io.ktor.client.engine.mock.*
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.defaultRequest
+import io.ktor.client.request.bearerAuth
 import io.ktor.http.*
 import io.ktor.http.content.TextContent
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 
 class KtorUserRepositoryTest {
     private lateinit var database: AppDatabase
@@ -117,7 +125,7 @@ class KtorUserRepositoryTest {
         }
 
         val api = UserApi(httpClient, apiConfig)
-        val repository = KtorUserRepository(api, database, TestTokenStore(tokenForUser("user-1")))
+        val repository = KtorUserRepository(api, database, TestTokenStore(tokenForUser("user-1")), TestAuthRepository)
 
         val user = repository.getCurrentUser()
 
@@ -158,7 +166,7 @@ class KtorUserRepositoryTest {
         }
 
         val api = UserApi(httpClient, apiConfig)
-        val repository = KtorUserRepository(api, database, TestTokenStore())
+        val repository = KtorUserRepository(api, database, TestTokenStore(), TestAuthRepository)
 
         val role = repository.getUserRole(userId)
 
@@ -184,7 +192,7 @@ class KtorUserRepositoryTest {
         }
 
         val api = UserApi(httpClient, apiConfig)
-        val repository = KtorUserRepository(api, database, TestTokenStore())
+        val repository = KtorUserRepository(api, database, TestTokenStore(), TestAuthRepository)
 
         val role = repository.getUserRole(userId)
 
@@ -231,7 +239,7 @@ class KtorUserRepositoryTest {
         }
 
         val api = UserApi(httpClient, apiConfig)
-        val repository = KtorUserRepository(api, database, TestTokenStore())
+        val repository = KtorUserRepository(api, database, TestTokenStore(), TestAuthRepository)
 
         repository.updateUser(updatedUser)
 
@@ -240,6 +248,124 @@ class KtorUserRepositoryTest {
         val dbUser = database.appDatabaseQueries.selectUserById("user-update").executeAsOneOrNull()
         assertEquals("Updated Name", dbUser?.name)
         assertEquals("updated@example.com", dbUser?.email)
+    }
+
+    @Test
+    fun `identity update uses authoritative response for local and authenticated state`() = runTest {
+        val authoritative = User(
+            id = "user-update",
+            name = "Canonical Name",
+            email = "canonical@example.com",
+            role = UserRole.STUDENT
+        )
+        val tokenStore = TestTokenStore(tokenForUser(authoritative.id))
+        val mockEngine = MockEngine { request ->
+            val payload = json.parseToJsonElement((request.body as TextContent).text).jsonObject
+            assertEquals("/me", request.url.encodedPath)
+            assertEquals(HttpMethod.Put, request.method)
+            assertEquals(setOf("name", "email"), payload.keys)
+            assertFalse("role" in payload)
+            respond(
+                content = json.encodeToString(authoritative),
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json")
+            )
+        }
+        val httpClient = HttpClient(mockEngine) {
+            install(ContentNegotiation) { json(json) }
+        }
+        val authRepository = KtorAuthRepository(AuthApi(httpClient, apiConfig), tokenStore)
+        val repository = KtorUserRepository(
+            UserApi(httpClient, apiConfig),
+            database,
+            tokenStore,
+            authRepository
+        )
+
+        val result = repository.updateIdentity(
+            UpdateIdentityRequest(name = "Requested Name", email = "requested@example.com")
+        )
+
+        assertEquals(authoritative, result)
+        assertEquals(authoritative, authRepository.session.value.user)
+        val local = database.appDatabaseQueries.selectUserById(authoritative.id).executeAsOne()
+        assertEquals(authoritative.name, local.name)
+        assertEquals(authoritative.email, local.email)
+    }
+
+    @Test
+    fun `identity update binds request authorization to captured session`() = runTest {
+        val originalToken = tokenForUser("user-original")
+        val replacementToken = tokenForUser("user-replacement")
+        val tokenStore = TestTokenStore(originalToken)
+        var authorization: String? = null
+        val httpClient = HttpClient(MockEngine { request ->
+            authorization = request.headers[HttpHeaders.Authorization]
+            respond(
+                content = json.encodeToString(User("user-original", "Name", "name@example.com", UserRole.STUDENT)),
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json")
+            )
+        }) {
+            defaultRequest {
+                tokenStore.accessToken = replacementToken
+                bearerAuth(requireNotNull(tokenStore.accessToken))
+            }
+            install(ContentNegotiation) { json(json) }
+        }
+        val authRepository = KtorAuthRepository(AuthApi(httpClient, apiConfig), tokenStore)
+        val repository = KtorUserRepository(UserApi(httpClient, apiConfig), database, tokenStore, authRepository)
+
+        repository.updateIdentity(UpdateIdentityRequest("Name", "name@example.com"))
+
+        assertEquals("Bearer $originalToken", authorization)
+    }
+
+    @Test
+    fun `identity update keeps authoritative session when local cache fails`() = runTest {
+        val authoritative = User(
+            id = "user-update",
+            name = "Canonical Name",
+            email = "canonical@example.com",
+            role = UserRole.STUDENT
+        )
+        val tokenStore = TestTokenStore(tokenForUser(authoritative.id))
+        val httpClient = HttpClient(MockEngine {
+            respond(
+                content = json.encodeToString(authoritative),
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json")
+            )
+        }) {
+            install(ContentNegotiation) { json(json) }
+        }
+        val authRepository = KtorAuthRepository(AuthApi(httpClient, apiConfig), tokenStore)
+        val repository = KtorUserRepository(UserApi(httpClient, apiConfig), database, tokenStore, authRepository)
+        driver.close()
+
+        val result = repository.updateIdentity(UpdateIdentityRequest("Requested Name", "requested@example.com"))
+
+        assertEquals(authoritative, result)
+        assertEquals(authoritative, authRepository.session.value.user)
+    }
+
+    @Test
+    fun `logout prevents a stale identity response from restoring the session`() {
+        val tokenStore = TestTokenStore(tokenForUser("user-update"))
+        val authRepository = KtorAuthRepository(
+            AuthApi(HttpClient(MockEngine { error("Not used") }), apiConfig),
+            tokenStore
+        )
+        val expectedToken = authRepository.session.value.token
+
+        authRepository.logout()
+        authRepository.replaceSessionUser(
+            User("user-update", "Stale Name", "stale@example.com", UserRole.STUDENT),
+            expectedToken
+        )
+
+        assertEquals(AuthSession(), authRepository.session.value)
+        assertEquals(null, tokenStore.accessToken)
     }
 
     @Test
@@ -359,7 +485,7 @@ class KtorUserRepositoryTest {
             }
         }
 
-        val repository = KtorUserRepository(UserApi(httpClient, apiConfig), database, TestTokenStore())
+        val repository = KtorUserRepository(UserApi(httpClient, apiConfig), database, TestTokenStore(), TestAuthRepository)
 
         val syncedProgress = repository.getUserProgress(userId)
 
@@ -443,7 +569,7 @@ class KtorUserRepositoryTest {
             }
         }
 
-        val repository = KtorUserRepository(UserApi(httpClient, apiConfig), database, TestTokenStore())
+        val repository = KtorUserRepository(UserApi(httpClient, apiConfig), database, TestTokenStore(), TestAuthRepository)
 
         repository.attemptExercise(exerciseId = exerciseId, submission = MultipleChoiceSubmission(selectedOptionId = "Answer"), score = 10)
         repository.attemptExercise(exerciseId = exerciseId, submission = MultipleChoiceSubmission(selectedOptionId = "Answer"), score = 99)
@@ -456,6 +582,14 @@ class KtorUserRepositoryTest {
 private class TestTokenStore(
     override var accessToken: String? = null
 ) : TokenStore
+
+private object TestAuthRepository : AuthRepository {
+    override val session = MutableStateFlow(AuthSession())
+    override suspend fun login(email: String, password: String) = error("Not used")
+    override suspend fun register(name: String, email: String, password: String) = error("Not used")
+    override fun replaceSessionUser(user: User, expectedToken: String?) = Unit
+    override fun logout() = Unit
+}
 
 @OptIn(ExperimentalEncodingApi::class)
 private fun tokenForUser(userId: String): String {

@@ -54,7 +54,7 @@ val appModule = module {
     single<AuthRepository> { KtorAuthRepository(get(), get()) }
     single<LessonRepository> { KtorLessonRepository(get(), get()) }
     single<ExerciseRepository> { KtorExerciseRepository(get(), get()) }
-    single<UserRepository> { KtorUserRepository(get(), get(), get()) }
+    single<UserRepository> { KtorUserRepository(get(), get(), get(), get()) }
     single<LearnerProfileRepository> { SqlDelightLearnerProfileRepository(get()) }
 
     viewModelOf(::CourseViewModel)

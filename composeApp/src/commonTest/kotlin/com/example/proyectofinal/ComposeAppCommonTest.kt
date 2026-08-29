@@ -21,11 +21,15 @@ import com.example.proyectofinal.domain.LessonRepository
 import com.example.proyectofinal.domain.StudentTrack
 import com.example.proyectofinal.domain.UserRepository
 import com.example.proyectofinal.models.Course
+import com.example.proyectofinal.models.ChangePasswordRequest
 import com.example.proyectofinal.models.Exercise
 import com.example.proyectofinal.models.ExerciseAttemptResponse
 import com.example.proyectofinal.models.ExerciseSubmission
 import com.example.proyectofinal.models.ExerciseType
 import com.example.proyectofinal.models.Lesson
+import com.example.proyectofinal.models.ProfilePreferences
+import com.example.proyectofinal.models.UpdateAvatarRequest
+import com.example.proyectofinal.models.UpdateIdentityRequest
 import com.example.proyectofinal.models.User
 import com.example.proyectofinal.models.UserProgress
 import com.example.proyectofinal.models.UserRole
@@ -283,6 +287,8 @@ private object AppModuleTestAuthRepository : AuthRepository {
 
     override suspend fun register(name: String, email: String, password: String): Result<User> = Result.success(appModuleTestUser)
 
+    override fun replaceSessionUser(user: User, expectedToken: String?) = Unit
+
     override fun logout() = Unit
 }
 
@@ -292,6 +298,11 @@ private object AppModuleTestUserRepository : UserRepository {
     override suspend fun getUserRole(userId: String): UserRole = UserRole.STUDENT
 
     override suspend fun updateUser(user: User) = Unit
+    override suspend fun updateIdentity(request: UpdateIdentityRequest): User = error("Not used")
+    override suspend fun changePassword(request: ChangePasswordRequest) = error("Not used")
+    override suspend fun getProfilePreferences(): ProfilePreferences = error("Not used")
+    override suspend fun updateProfilePreferences(preferences: ProfilePreferences): ProfilePreferences = error("Not used")
+    override suspend fun updateAvatar(request: UpdateAvatarRequest): ProfilePreferences = error("Not used")
 
     override suspend fun getUserProgress(userId: String): UserProgress = UserProgress(
         userId = userId,

@@ -161,6 +161,10 @@ class FakeAuthRepository : AuthRepository {
         return registerResult
     }
 
+    override fun replaceSessionUser(user: User, expectedToken: String?) {
+        session.value = session.value.copy(user = user)
+    }
+
     override fun logout() {
         logoutCount++
         session.value = AuthSession()

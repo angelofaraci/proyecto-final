@@ -6,6 +6,7 @@ import com.example.proyectofinal.domain.ExerciseRepository
 import com.example.proyectofinal.domain.LessonRepository
 import com.example.proyectofinal.domain.UserRepository
 import com.example.proyectofinal.models.ChoiceOption
+import com.example.proyectofinal.models.ChangePasswordRequest
 import com.example.proyectofinal.models.Exercise
 import com.example.proyectofinal.models.ExerciseAttemptResponse
 import com.example.proyectofinal.models.ExerciseSubmission
@@ -16,6 +17,9 @@ import com.example.proyectofinal.models.MultiSelectPayload
 import com.example.proyectofinal.models.MultiSelectSubmission
 import com.example.proyectofinal.models.MultipleChoicePayload
 import com.example.proyectofinal.models.MultipleChoiceSubmission
+import com.example.proyectofinal.models.ProfilePreferences
+import com.example.proyectofinal.models.UpdateAvatarRequest
+import com.example.proyectofinal.models.UpdateIdentityRequest
 import com.example.proyectofinal.models.User
 import com.example.proyectofinal.models.UserProgress
 import com.example.proyectofinal.models.UserRole
@@ -405,6 +409,8 @@ private class FakeLessonMapAuthRepository(user: User?) : AuthRepository {
 
     override suspend fun register(name: String, email: String, password: String): Result<User> = Result.success(testUser)
 
+    override fun replaceSessionUser(user: User, expectedToken: String?) { state.value = state.value.copy(user = user) }
+
     override fun logout() = Unit
 }
 
@@ -421,6 +427,11 @@ private class FakeLessonMapUserRepository(
     override suspend fun getUserRole(userId: String): UserRole = UserRole.STUDENT
 
     override suspend fun updateUser(user: User) = Unit
+    override suspend fun updateIdentity(request: UpdateIdentityRequest): User = error("Not used")
+    override suspend fun changePassword(request: ChangePasswordRequest) = error("Not used")
+    override suspend fun getProfilePreferences(): ProfilePreferences = error("Not used")
+    override suspend fun updateProfilePreferences(preferences: ProfilePreferences): ProfilePreferences = error("Not used")
+    override suspend fun updateAvatar(request: UpdateAvatarRequest): ProfilePreferences = error("Not used")
 
     override suspend fun getUserProgress(userId: String): UserProgress = progress
 

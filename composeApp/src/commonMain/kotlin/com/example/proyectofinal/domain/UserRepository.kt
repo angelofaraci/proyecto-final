@@ -2,6 +2,10 @@ package com.example.proyectofinal.domain
 
 import com.example.proyectofinal.models.ExerciseAttemptResponse
 import com.example.proyectofinal.models.ExerciseSubmission
+import com.example.proyectofinal.models.ChangePasswordRequest
+import com.example.proyectofinal.models.ProfilePreferences
+import com.example.proyectofinal.models.UpdateAvatarRequest
+import com.example.proyectofinal.models.UpdateIdentityRequest
 import com.example.proyectofinal.models.User
 import com.example.proyectofinal.models.UserProgress
 import com.example.proyectofinal.models.UserRole
@@ -21,6 +25,16 @@ interface UserRepository {
      * Updates user profile information.
      */
     suspend fun updateUser(user: User)
+
+    suspend fun updateIdentity(request: UpdateIdentityRequest): User
+
+    suspend fun changePassword(request: ChangePasswordRequest)
+
+    suspend fun getProfilePreferences(): ProfilePreferences
+
+    suspend fun updateProfilePreferences(preferences: ProfilePreferences): ProfilePreferences
+
+    suspend fun updateAvatar(request: UpdateAvatarRequest): ProfilePreferences
 
     /**
      * Fetches and syncs the user's cumulative progress.
