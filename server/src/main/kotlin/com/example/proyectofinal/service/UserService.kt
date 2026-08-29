@@ -8,6 +8,7 @@ import com.example.proyectofinal.database.EnrolledCourses
 import com.example.proyectofinal.database.Exercises
 import com.example.proyectofinal.database.Lessons
 import com.example.proyectofinal.database.UserProgress as UserProgressTable
+import com.example.proyectofinal.database.UserProfilePreferences
 import com.example.proyectofinal.database.Users
 import com.example.proyectofinal.database.dbQuery
 import com.example.proyectofinal.models.AdminUserResponse
@@ -17,6 +18,10 @@ import com.example.proyectofinal.models.ExerciseAttemptResponse
 import com.example.proyectofinal.models.ExerciseCompletionResponse
 import com.example.proyectofinal.models.PageResponse
 import com.example.proyectofinal.models.ChangePasswordRequest
+import com.example.proyectofinal.models.AvatarId
+import com.example.proyectofinal.models.ProfilePreferences
+import com.example.proyectofinal.models.SupportedLanguage
+import com.example.proyectofinal.models.UpdateAvatarRequest
 import com.example.proyectofinal.models.UpdateIdentityRequest
 import com.example.proyectofinal.models.UpdateUserRequest
 import com.example.proyectofinal.models.User
@@ -157,6 +162,40 @@ class UserService {
         }
         return if (updated == 1) PasswordChangeResult.Success else PasswordChangeResult.InvalidPassword
     }
+
+    fun getProfilePreferences(userId: String): ProfilePreferences? = dbQuery {
+        readProfilePreferences(userId)
+    }
+
+    fun updateProfilePreferences(userId: String, preferences: ProfilePreferences): ProfilePreferences? = dbQuery {
+        val updated = UserProfilePreferences.update({ UserProfilePreferences.userId eq userId }) {
+            it[UserProfilePreferences.notificationsEnabled] = preferences.notificationsEnabled
+            it[UserProfilePreferences.soundsEnabled] = preferences.soundsEnabled
+            it[UserProfilePreferences.language] = preferences.language?.toStorageValue()
+            it[UserProfilePreferences.avatarId] = preferences.avatarId?.toStorageValue()
+        }
+        if (updated == 0) null else readProfilePreferences(userId)
+    }
+
+    fun updateAvatar(userId: String, request: UpdateAvatarRequest): ProfilePreferences? = dbQuery {
+        val updated = UserProfilePreferences.update({ UserProfilePreferences.userId eq userId }) {
+            it[UserProfilePreferences.avatarId] = request.avatarId.toStorageValue()
+        }
+        if (updated == 0) null else readProfilePreferences(userId)
+    }
+
+    private fun readProfilePreferences(userId: String): ProfilePreferences? =
+        UserProfilePreferences.selectAll()
+            .where { UserProfilePreferences.userId eq userId }
+            .firstOrNull()
+            ?.let { row ->
+                ProfilePreferences(
+                    notificationsEnabled = row[UserProfilePreferences.notificationsEnabled],
+                    soundsEnabled = row[UserProfilePreferences.soundsEnabled],
+                    language = row[UserProfilePreferences.language]?.let(::storedLanguage),
+                    avatarId = row[UserProfilePreferences.avatarId]?.let(::storedAvatar)
+                )
+            }
 
     fun getUserProgress(userId: String): UserProgress = dbQuery {
         readUserProgress(userId)
@@ -374,3 +413,20 @@ class UserService {
         val EMAIL_PATTERN = Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")
     }
 }
+
+private fun SupportedLanguage.toStorageValue() = when (this) {
+    SupportedLanguage.SPANISH -> "es"
+    SupportedLanguage.ENGLISH -> "en"
+}
+
+private fun AvatarId.toStorageValue() = "avatar_${ordinal + 1}"
+
+private fun storedLanguage(value: String) = when (value) {
+    "es" -> SupportedLanguage.SPANISH
+    "en" -> SupportedLanguage.ENGLISH
+    else -> error("Unsupported stored language: $value")
+}
+
+private fun storedAvatar(value: String) =
+    AvatarId.entries.getOrNull(value.removePrefix("avatar_").toIntOrNull()?.minus(1) ?: -1)
+        ?: error("Unsupported stored avatar: $value")
