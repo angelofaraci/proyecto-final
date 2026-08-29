@@ -1,13 +1,19 @@
 package com.example.proyectofinal.routes
 
 import com.example.proyectofinal.models.CompleteLessonRequest
+import com.example.proyectofinal.models.ChangePasswordRequest
 import com.example.proyectofinal.models.ExerciseAttemptRequest
+import com.example.proyectofinal.models.ProfileError
+import com.example.proyectofinal.models.ProfileErrorCode
+import com.example.proyectofinal.models.UpdateIdentityRequest
 import com.example.proyectofinal.models.UpdateUserRequest
 import com.example.proyectofinal.models.UserRole
 import com.example.proyectofinal.plugins.currentRole
 import com.example.proyectofinal.plugins.currentUserId
 import com.example.proyectofinal.plugins.requireSelfOrAdmin
 import com.example.proyectofinal.service.ExerciseAttemptResult
+import com.example.proyectofinal.service.IdentityUpdateResult
+import com.example.proyectofinal.service.PasswordChangeResult
 import com.example.proyectofinal.service.UserService
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -18,6 +24,36 @@ import io.ktor.server.routing.*
 fun Application.userRoutes(service: UserService) {
     routing {
         authenticate("auth-jwt") {
+            put("/me") {
+                val userId = call.currentUserId() ?: return@put call.respond(HttpStatusCode.Unauthorized)
+                val request = try {
+                    call.receive<UpdateIdentityRequest>()
+                } catch (_: Exception) {
+                    return@put call.respond(HttpStatusCode.BadRequest, profileError(ProfileErrorCode.INVALID_VALUE))
+                }
+                when (val result = service.updateIdentity(userId, request)) {
+                    is IdentityUpdateResult.Success -> call.respond(result.user)
+                    IdentityUpdateResult.InvalidValue -> call.respond(HttpStatusCode.BadRequest, profileError(ProfileErrorCode.INVALID_VALUE))
+                    IdentityUpdateResult.EmailConflict -> call.respond(HttpStatusCode.Conflict, profileError(ProfileErrorCode.EMAIL_CONFLICT))
+                    IdentityUpdateResult.NotFound -> call.respond(HttpStatusCode.NotFound)
+                }
+            }
+
+            put("/me/password") {
+                val userId = call.currentUserId() ?: return@put call.respond(HttpStatusCode.Unauthorized)
+                val request = try {
+                    call.receive<ChangePasswordRequest>()
+                } catch (_: Exception) {
+                    return@put call.respond(HttpStatusCode.BadRequest, profileError(ProfileErrorCode.INVALID_VALUE))
+                }
+                when (service.changePassword(userId, request)) {
+                    PasswordChangeResult.Success -> call.respond(HttpStatusCode.NoContent)
+                    PasswordChangeResult.InvalidValue -> call.respond(HttpStatusCode.BadRequest, profileError(ProfileErrorCode.INVALID_VALUE))
+                    PasswordChangeResult.InvalidPassword -> call.respond(HttpStatusCode.BadRequest, profileError(ProfileErrorCode.INVALID_PASSWORD))
+                    PasswordChangeResult.NotFound -> call.respond(HttpStatusCode.NotFound)
+                }
+            }
+
             get("/users/{id}") {
                 val userId = call.parameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest)
                 if (!call.requireSelfOrAdmin(userId)) return@get
@@ -100,3 +136,5 @@ fun Application.userRoutes(service: UserService) {
         }
     }
 }
+
+private fun profileError(code: ProfileErrorCode) = ProfileError(code, code.name)
