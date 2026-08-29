@@ -32,8 +32,12 @@ import com.example.proyectofinal.models.MultipleChoicePayload
 import com.example.proyectofinal.models.MultipleChoiceSubmission
 import com.example.proyectofinal.models.RegisterRequest
 import com.example.proyectofinal.models.ChangePasswordRequest
+import com.example.proyectofinal.models.AvatarId
 import com.example.proyectofinal.models.ProfileError
 import com.example.proyectofinal.models.ProfileErrorCode
+import com.example.proyectofinal.models.ProfilePreferences
+import com.example.proyectofinal.models.SupportedLanguage
+import com.example.proyectofinal.models.UpdateAvatarRequest
 import com.example.proyectofinal.models.UpdateIdentityRequest
 import com.example.proyectofinal.models.TheoryUpdateRequest
 import com.example.proyectofinal.models.UpdateExerciseRequest
@@ -263,6 +267,72 @@ class ServerIntegrationTest {
         }
         assertEquals(HttpStatusCode.Unauthorized, login(oldPassword).status)
         assertEquals(HttpStatusCode.OK, login(newPassword).status)
+    }
+
+    @Test
+    fun `profile preferences are selected by JWT subject and remain isolated`() = testApplication {
+        setupTestDatabase(); seedProfilePreferenceUsers()
+        application { module(initDatabase = false, seedData = false) }
+        val api = createClient { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }
+        val subjectToken = Security.generateToken("subject", UserRole.STUDENT.name)
+
+        val initial = api.get("/me/preferences") { bearerAuth(subjectToken) }.body<ProfilePreferences>()
+        assertEquals(ProfilePreferences(), initial)
+        val updated = api.put("/me/preferences") {
+            bearerAuth(subjectToken)
+            header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            setBody("""{"notificationsEnabled":false,"soundsEnabled":false,"language":"en","avatarId":"avatar_2","userId":"other"}""")
+        }
+        assertEquals(HttpStatusCode.OK, updated.status)
+        assertEquals(
+            ProfilePreferences(false, false, SupportedLanguage.ENGLISH, AvatarId.AVATAR_2),
+            updated.body()
+        )
+        val other = api.get("/me/preferences") {
+            bearerAuth(Security.generateToken("other", UserRole.STUDENT.name))
+        }.body<ProfilePreferences>()
+        assertEquals(ProfilePreferences(language = SupportedLanguage.SPANISH, avatarId = AvatarId.AVATAR_1), other)
+    }
+
+    @Test
+    fun `avatar update changes only the JWT subjects avatar`() = testApplication {
+        setupTestDatabase(); seedProfilePreferenceUsers()
+        application { module(initDatabase = false, seedData = false) }
+        val api = createClient { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }
+        val response = api.put("/me/avatar") {
+            bearerAuth(Security.generateToken("subject", UserRole.STUDENT.name))
+            header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            setBody(UpdateAvatarRequest(AvatarId.AVATAR_4))
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals(AvatarId.AVATAR_4, response.body<ProfilePreferences>().avatarId)
+        transaction {
+            assertEquals("avatar_4", UserProfilePreferences.selectAll().where { UserProfilePreferences.userId eq "subject" }.single()[UserProfilePreferences.avatarId])
+            assertEquals("avatar_1", UserProfilePreferences.selectAll().where { UserProfilePreferences.userId eq "other" }.single()[UserProfilePreferences.avatarId])
+        }
+    }
+
+    @Test
+    fun `unsupported preference catalogs return typed errors without mutation`() = testApplication {
+        setupTestDatabase(); seedProfilePreferenceUsers()
+        application { module(initDatabase = false, seedData = false) }
+        val api = createClient { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }
+        val token = Security.generateToken("subject", UserRole.STUDENT.name)
+        suspend fun put(path: String, payload: String) = api.put(path) {
+            bearerAuth(token); header(HttpHeaders.ContentType, ContentType.Application.Json.toString()); setBody(payload)
+        }
+
+        val partial = put("/me/preferences", """{"notificationsEnabled":false}""")
+        val language = put("/me/preferences", """{"notificationsEnabled":false,"soundsEnabled":false,"language":"fr","avatarId":null}""")
+        val avatar = put("/me/avatar", """{"avatarId":"avatar_99"}""")
+        assertEquals(HttpStatusCode.BadRequest, partial.status)
+        assertEquals(ProfileErrorCode.INVALID_VALUE, partial.body<ProfileError>().code)
+        assertEquals(HttpStatusCode.BadRequest, language.status)
+        assertEquals(ProfileErrorCode.INVALID_VALUE, language.body<ProfileError>().code)
+        assertEquals(HttpStatusCode.BadRequest, avatar.status)
+        assertEquals(ProfileErrorCode.INVALID_VALUE, avatar.body<ProfileError>().code)
+        assertEquals(ProfilePreferences(), api.get("/me/preferences") { bearerAuth(token) }.body())
     }
 
     @Test
@@ -1391,6 +1461,23 @@ class ServerIntegrationTest {
                 it[Courses.difficulty] = difficulty
                 it[Courses.durationMinutes] = durationMinutes
                 it[Courses.xpReward] = xpReward
+            }
+        }
+    }
+
+    private fun seedProfilePreferenceUsers() {
+        transaction {
+            listOf("subject", "other").forEach { userId ->
+                Users.insert {
+                    it[id] = userId; it[name] = userId; it[email] = "$userId@example.com"
+                    it[passwordHash] = "hash"; it[role] = "STUDENT"
+                }
+            }
+            UserProfilePreferences.insert { it[UserProfilePreferences.userId] = "subject" }
+            UserProfilePreferences.insert {
+                it[UserProfilePreferences.userId] = "other"
+                it[UserProfilePreferences.language] = "es"
+                it[UserProfilePreferences.avatarId] = "avatar_1"
             }
         }
     }
