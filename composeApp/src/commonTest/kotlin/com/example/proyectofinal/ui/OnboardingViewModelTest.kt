@@ -382,6 +382,7 @@ private class OnboardingFakeAuthRepository(user: User?) : AuthRepository {
     override val session: StateFlow<AuthSession> = state
     override suspend fun login(email: String, password: String): Result<User> = Result.success(requireNotNull(state.value.user))
     override suspend fun register(name: String, email: String, password: String): Result<User> = Result.success(requireNotNull(state.value.user))
+    override fun replaceSessionUser(user: User, expectedToken: String?) { state.value = state.value.copy(user = user) }
     override fun logout() = Unit
 }
 

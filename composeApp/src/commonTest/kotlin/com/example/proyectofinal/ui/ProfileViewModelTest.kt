@@ -8,6 +8,10 @@ import com.example.proyectofinal.domain.StudentTrack
 import com.example.proyectofinal.domain.UserRepository
 import com.example.proyectofinal.models.ExerciseAttemptResponse
 import com.example.proyectofinal.models.ExerciseSubmission
+import com.example.proyectofinal.models.ChangePasswordRequest
+import com.example.proyectofinal.models.ProfilePreferences
+import com.example.proyectofinal.models.UpdateAvatarRequest
+import com.example.proyectofinal.models.UpdateIdentityRequest
 import com.example.proyectofinal.models.User
 import com.example.proyectofinal.models.UserProgress
 import com.example.proyectofinal.models.UserRole
@@ -124,6 +128,7 @@ private class ProfileFakeAuthRepository(user: User) : AuthRepository {
     override val session: StateFlow<AuthSession> = state
     override suspend fun login(email: String, password: String): Result<User> = Result.success(testUser)
     override suspend fun register(name: String, email: String, password: String): Result<User> = Result.success(testUser)
+    override fun replaceSessionUser(user: User, expectedToken: String?) { state.value = state.value.copy(user = user) }
     override fun logout() = Unit
 }
 
@@ -134,6 +139,11 @@ private class FakeUserRepository(
     override suspend fun getCurrentUser(): User? = testUser
     override suspend fun getUserRole(userId: String): UserRole = UserRole.STUDENT
     override suspend fun updateUser(user: User) = Unit
+    override suspend fun updateIdentity(request: UpdateIdentityRequest): User = error("Not used")
+    override suspend fun changePassword(request: ChangePasswordRequest) = error("Not used")
+    override suspend fun getProfilePreferences(): ProfilePreferences = error("Not used")
+    override suspend fun updateProfilePreferences(preferences: ProfilePreferences): ProfilePreferences = error("Not used")
+    override suspend fun updateAvatar(request: UpdateAvatarRequest): ProfilePreferences = error("Not used")
     override suspend fun getUserProgress(userId: String): UserProgress {
         errorMessage?.let { throw IllegalStateException(it) }
         return requireNotNull(progress)

@@ -41,8 +41,9 @@ class UserApi(
         }
     }
 
-    suspend fun updateIdentity(request: UpdateIdentityRequest): User =
+    suspend fun updateIdentity(request: UpdateIdentityRequest, accessToken: String): User =
         client.put("$baseUrl/me") {
+            bearerAuth(accessToken)
             contentType(ContentType.Application.Json)
             setBody(request)
         }.profileBody()

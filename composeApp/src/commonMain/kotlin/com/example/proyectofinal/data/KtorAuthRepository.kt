@@ -8,6 +8,7 @@ import com.example.proyectofinal.models.User
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 
 class KtorAuthRepository(
     private val authApi: AuthApi,
@@ -29,9 +30,19 @@ class KtorAuthRepository(
     override suspend fun register(name: String, email: String, password: String): Result<User> =
         authenticate { authApi.register(name = name, email = email, password = password) }
 
+    override fun replaceSessionUser(user: User, expectedToken: String?) {
+        _session.update { current ->
+            if (expectedToken != null && current.token == expectedToken && tokenStore.accessToken == expectedToken) {
+                current.copy(user = user)
+            } else {
+                current
+            }
+        }
+    }
+
     override fun logout() {
         tokenStore.accessToken = null
-        _session.value = AuthSession()
+        _session.update { AuthSession() }
     }
 
     private suspend fun authenticate(request: suspend () -> AuthResponse): Result<User> =

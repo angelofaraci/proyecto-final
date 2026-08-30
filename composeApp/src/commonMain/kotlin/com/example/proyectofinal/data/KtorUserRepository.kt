@@ -2,12 +2,17 @@ package com.example.proyectofinal.data
 
 import com.example.proyectofinal.db.AppDatabase
 import com.example.proyectofinal.di.TokenStore
+import com.example.proyectofinal.domain.AuthRepository
 import com.example.proyectofinal.domain.UserRepository
+import com.example.proyectofinal.models.ChangePasswordRequest
 import com.example.proyectofinal.models.ExerciseAttemptResponse
 import com.example.proyectofinal.models.ExerciseSubmission
 import com.example.proyectofinal.models.User
 import com.example.proyectofinal.models.UserProgress
 import com.example.proyectofinal.models.UserRole
+import com.example.proyectofinal.models.ProfilePreferences
+import com.example.proyectofinal.models.UpdateAvatarRequest
+import com.example.proyectofinal.models.UpdateIdentityRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
@@ -21,7 +26,8 @@ import kotlinx.serialization.json.jsonPrimitive
 class KtorUserRepository(
     private val api: UserApi,
     private val database: AppDatabase,
-    private val tokenStore: TokenStore
+    private val tokenStore: TokenStore,
+    private val authRepository: AuthRepository
 ) : UserRepository {
 
     override suspend fun getCurrentUser(): User? = withContext(Dispatchers.IO) {
@@ -50,6 +56,37 @@ class KtorUserRepository(
         api.updateUser(user)
         insertUserToLocal(user)
     }
+
+    override suspend fun updateIdentity(request: UpdateIdentityRequest): User = withContext(Dispatchers.IO) {
+        val expectedToken = requireNotNull(authRepository.session.value.token)
+        val authoritative = api.updateIdentity(request, expectedToken)
+        authRepository.replaceSessionUser(authoritative, expectedToken)
+        try {
+            insertUserToLocal(authoritative)
+        } catch (_: Exception) {
+            // Remote state and authenticated session are authoritative; the cache is best effort.
+        }
+        authoritative
+    }
+
+    override suspend fun changePassword(request: ChangePasswordRequest) = withContext(Dispatchers.IO) {
+        api.changePassword(request)
+    }
+
+    override suspend fun getProfilePreferences(): ProfilePreferences = withContext(Dispatchers.IO) {
+        api.getProfilePreferences()
+    }
+
+    override suspend fun updateProfilePreferences(
+        preferences: ProfilePreferences
+    ): ProfilePreferences = withContext(Dispatchers.IO) {
+        api.updateProfilePreferences(preferences)
+    }
+
+    override suspend fun updateAvatar(request: UpdateAvatarRequest): ProfilePreferences =
+        withContext(Dispatchers.IO) {
+            api.updateAvatar(request)
+        }
 
     override suspend fun getUserProgress(userId: String): UserProgress = withContext(Dispatchers.IO) {
         try {
